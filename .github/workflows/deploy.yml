@@ -20,5 +20,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
               cd /usr/share/nginx/pygame
+              ls -ltr
               git pull origin main
               systemctl reload nginx
