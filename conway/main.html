@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conway生命游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        accent: '#722ED1',
+                        dark: '#1D2129',
+                        light: '#F2F3F5',
+                        surface: '#FFFFFF',
+                        muted: '#86909C',
+                        subtle: '#C9CDD4'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .grid-board {
+                display: grid;
+                grid-template-columns: repeat(var(--grid-cols), 1fr);
+                grid-template-rows: repeat(var(--grid-rows), 1fr);
+            }
+            .cell {
+                aspect-ratio: 1;
+                transition: all 0.1s ease-in-out;
+                border: 1px solid rgba(201, 205, 212, 0.1);
+            }
+            .cell:hover:not(.alive) {
+                background-color: rgba(22, 93, 255, 0.15);
+                transform: scale(1.05);
+                z-index: 10;
+            }
+            .alive {
+                background: radial-gradient(circle, rgba(22,93,255,1) 0%, rgba(22,93,255,0.8) 70%, rgba(22,93,255,0.4) 100%);
+                box-shadow: 0 0 10px rgba(22, 93, 255, 0.7);
+                border-radius: 2px;
+                transform: scale(0.9);
+                transition: all 0.15s ease-in-out;
+            }
+            .btn {
+                @apply px-4 py-2 rounded-md font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+            }
+            .btn-primary {
+                @apply bg-gradient-to-r from-primary to-primary/90 text-white hover:shadow-lg hover:shadow-primary/20 focus:ring-primary/50;
+            }
+            .btn-secondary {
+                @apply bg-white text-dark border border-subtle hover:bg-gray-50 hover:shadow-md focus:ring-primary/50;
+            }
+            .slider {
+                @apply w-full h-2 bg-gray-100 rounded-full appearance-none cursor-pointer;
+            }
+            .slider::-webkit-slider-thumb {
+                @apply appearance-none w-5 h-5 rounded-full bg-primary shadow-md cursor-pointer border-2 border-white;
+            }
+            .stats-card {
+                @apply bg-surface rounded-xl shadow-sm p-4 transition-all duration-300 hover:shadow-md border border-subtle/30;
+            }
+            .info-card {
+                @apply bg-surface rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-md border border-subtle/30;
+            }
+            .pattern-btn {
+                @apply flex flex-col items-center justify-center p-3 rounded-lg border border-subtle/50 hover:border-primary/30 transition-all duration-200 hover:shadow-sm hover:bg-primary/5;
+            }
+            .pattern-btn.active {
+                @apply border-primary bg-primary/10;
+            }
+            .gradient-title {
+                @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-light to-gray-100 min-h-screen text-dark antialiased">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="text-center mb-8">
+            <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold gradient-title mb-2">Conway生命游戏</h1>
+            <p class="text-muted text-lg max-w-2xl mx-auto">一款基于初始条件演化的零玩家游戏。从简单规则中发现涌现模式和复杂性。</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 order-2 lg:order-1">
+                <div class="bg-surface rounded-xl shadow-md p-4 lg:p-6 mb-6 transform transition-all duration-300 hover:shadow-lg">
+                    <div class="flex flex-wrap items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold">模拟区域</h2>
+                        <div class="flex space-x-2">
+                            <button id="playPauseBtn" class="btn btn-primary flex items-center">
+                                <i class="fa fa-play mr-1"></i> 开始
+                            </button>
+                            <button id="resetBtn" class="btn btn-secondary flex items-center">
+                                <i class="fa fa-refresh mr-1"></i> 重置
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative aspect-square bg-gray-50 rounded-lg overflow-hidden shadow-inner">
+                        <div id="gridContainer" class="absolute inset-0 grid-board" style="--grid-cols: 50; --grid-rows: 50;"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="stats-card">
+                        <h3 class="text-lg font-medium mb-2 flex items-center">
+                            <i class="fa fa-clock-o text-primary mr-2"></i> 代数
+                        </h3>
+                        <p id="generationCount" class="text-3xl font-bold">0</p>
+                    </div>
+                    <div class="stats-card">
+                        <h3 class="text-lg font-medium mb-2 flex items-center">
+                            <i class="fa fa-users text-secondary mr-2"></i> 存活细胞
+                        </h3>
+                        <p id="populationCount" class="text-3xl font-bold">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-surface rounded-xl shadow-md p-6 mb-6 transform transition-all duration-300 hover:shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">模拟控制</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="speedControl" class="block text-sm font-medium text-gray-700 mb-1">模拟速度</label>
+                            <input type="range" id="speedControl" min="1" max="60" value="10" class="slider">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>慢</span>
+                                <span>快</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="gridSizeControl" class="block text-sm font-medium text-gray-700 mb-1">网格大小</label>
+                            <input type="range" id="gridSizeControl" min="10" max="100" value="50" class="slider">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>小</span>
+                                <span>大</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="randomDensityControl" class="block text-sm font-medium text-gray-700 mb-1">随机密度</label>
+                            <input type="range" id="randomDensityControl" min="0" max="100" value="30" class="slider">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>稀疏</span>
+                                <span>密集</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 order-1 lg:order-2">
+                <div class="info-card transform transition-all duration-300 hover:-translate-y-1">
+                    <h2 class="text-xl font-semibold mb-4">关于游戏</h2>
+                    <p class="mb-4">Conway生命游戏是由数学家John Horton Conway在1970年设计的细胞自动机。</p>
+                    <p class="mb-4">这是一款零玩家游戏，意味着它的演化完全由初始状态决定，无需进一步输入。玩家通过创建初始配置并观察其演化来与生命游戏互动。</p>
+                    <h3 class="font-medium mt-6 mb-2">游戏规则:</h3>
+                    <ul class="list-disc pl-5 space-y-1 mb-4">
+                        <li>任何活细胞如果邻居少于两个，则死亡，就像因人口不足而死亡。</li>
+                        <li>任何活细胞如果有两个或三个邻居，则存活到下一代。</li>
+                        <li>任何活细胞如果邻居超过三个，则死亡，就像因人口过剩而死亡。</li>
+                        <li>任何死细胞如果恰好有三个邻居，则变成活细胞，就像通过繁殖诞生。</li>
+                    </ul>
+                </div>
+
+                <div class="info-card transform transition-all duration-300 hover:-translate-y-1">
+                    <h2 class="text-xl font-semibold mb-4">经典模式</h2>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <button data-pattern="glider" class="pattern-btn">
+                            <div class="text-sm font-medium">滑翔机</div>
+                        </button>
+                        <button data-pattern="blinker" class="pattern-btn">
+                            <div class="text-sm font-medium">闪光灯</div>
+                        </button>
+                        <button data-pattern="toad" class="pattern-btn">
+                            <div class="text-sm font-medium">蟾蜍</div>
+                        </button>
+                        <button data-pattern="pulsar" class="pattern-btn">
+                            <div class="text-sm font-medium">脉冲星</div>
+                        </button>
+                        <button data-pattern="gliderGun" class="pattern-btn col-span-2">
+                            <div class="text-sm font-medium">滑翔机枪</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-card transform transition-all duration-300 hover:-translate-y-1">
+                    <h2 class="text-xl font-semibold mb-4">使用说明</h2>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li>点击网格可切换细胞的存活状态</li>
+                        <li>使用 <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 rounded">开始/暂停</span> 按钮控制模拟</li>
+                        <li>调整速度滑块可改变模拟速度</li>
+                        <li>使用网格大小滑块可调整网格数量</li>
+                        <li>点击 <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 rounded">重置</span> 按钮清空网格</li>
+                        <li>调整随机密度滑块后重置可生成随机图案</li>
+                        <li>点击模式按钮可加载预设图案</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-12 text-center text-muted text-sm">
+            <p>用心制作 | 探索更多 <a href="#" class="text-primary hover:underline">细胞自动机</a> 概念</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 游戏状态
+            let grid = [];
+            let nextGrid = [];
+            let generation = 0;
+            let isRunning = false;
+            let animationId = null;
+            let gridSize = 50;
+            let simulationSpeed = 10; // 每秒更新次数
+            let randomDensity = 30; // 百分比
+
+            const gridContainer = document.getElementById('gridContainer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const generationCount = document.getElementById('generationCount');
+            const populationCount = document.getElementById('populationCount');
+            const speedControl = document.getElementById('speedControl');
+            const gridSizeControl = document.getElementById('gridSizeControl');
+            const randomDensityControl = document.getElementById('randomDensityControl');
+            const patternBtns = document.querySelectorAll('.pattern-btn');
+
+            // 初始化网格
+            function initializeGrid() {
+                grid = [];
+                nextGrid = [];
+                
+                for (let y = 0; y < gridSize; y++) {
+                    grid[y] = [];
+                    nextGrid[y] = [];
+                    for (let x = 0; x < gridSize; x++) {
+                        grid[y][x] = false;
+                        nextGrid[y][x] = false;
+                    }
+                }
+                
+                // 根据密度随机生成细胞
+                if (randomDensity > 0) {
+                    for (let y = 0; y < gridSize; y++) {
+                        for (let x = 0; x < gridSize; x++) {
+                            grid[y][x] = Math.random() < (randomDensity / 100);
+                        }
+                    }
+                }
+                
+                renderGrid();
+                updateStats();
+            }
+
+            // 渲染网格到DOM
+            function renderGrid() {
+                gridContainer.style.setProperty('--grid-cols', gridSize);
+                gridContainer.style.setProperty('--grid-rows', gridSize);
+                gridContainer.innerHTML = '';
+                
+                for (let y = 0; y < gridSize; y++) {
+                    for (let x = 0; x < gridSize; x++) {
+                        const cell = document.createElement('div');
+                        cell.classList.add('cell');
+                        cell.dataset.x = x;
+                        cell.dataset.y = y;
+                        
+                        if (grid[y][x]) {
+                            cell.classList.add('alive');
+                        }
+                        
+                        cell.addEventListener('click', () => toggleCell(x, y));
+                        gridContainer.appendChild(cell);
+                    }
+                }
+            }
+
+            // 切换细胞状态
+            function toggleCell(x, y) {
+                if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
+                    grid[y][x] = !grid[y][x];
+                    renderGrid();
+                    updateStats();
+                }
+            }
+
+            // 计算存活邻居数量
+            function countNeighbors(x, y) {
+                let count = 0;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        
+                        const nx = (x + dx + gridSize) % gridSize;
+                        const ny = (y + dy + gridSize) % gridSize;
+                        
+                        if (grid[ny][nx]) {
+                            count++;
+                        }
+                    }
+                }
+                return count;
+            }
+
+            // 应用Conway生命游戏规则
+            function applyRules() {
+                for (let y = 0; y < gridSize; y++) {
+                    for (let x = 0; x < gridSize; x++) {
+                        const neighbors = countNeighbors(x, y);
+                        
+                        if (grid[y][x]) {
+                            // 细胞存活
+                            nextGrid[y][x] = neighbors === 2 || neighbors === 3;
+                        } else {
+                            // 细胞死亡
+                            nextGrid[y][x] = neighbors === 3;
+                        }
+                    }
+                }
+                
+                // 交换网格
+                [grid, nextGrid] = [nextGrid, grid];
+                generation++;
+                
+                renderGrid();
+                updateStats();
+            }
+
+            // 更新统计信息
+            function updateStats() {
+                generationCount.textContent = generation;
+                
+                let population = 0;
+                for (let y = 0; y < gridSize; y++) {
+                    for (let x = 0; x < gridSize; x++) {
+                        if (grid[y][x]) population++;
+                    }
+                }
+                
+                populationCount.textContent = population;
+            }
+
+            // 动画循环
+            function gameLoop() {
+                if (isRunning) {
+                    // 使用setTimeout控制速度
+                    setTimeout(() => {
+                        applyRules();
+                        animationId = requestAnimationFrame(gameLoop);
+                    }, 1000 / simulationSpeed);
+                }
+            }
+
+            // 切换播放/暂停
+            function togglePlayPause() {
+                isRunning = !isRunning;
+                
+                if (isRunning) {
+                    playPauseBtn.innerHTML = '<i class="fa fa-pause mr-1"></i> 暂停';
+                    playPauseBtn.classList.remove('btn-primary');
+                    playPauseBtn.classList.add('bg-red-500', 'hover:bg-red-600', 'focus:ring-red-500/50');
+                    gameLoop();
+                } else {
+                    playPauseBtn.innerHTML = '<i class="fa fa-play mr-1"></i> 开始';
+                    playPauseBtn.classList.add('btn-primary');
+                    playPauseBtn.classList.remove('bg-red-500', 'hover:bg-red-600', 'focus:ring-red-500/50');
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                        animationId = null;
+                    }
+                }
+            }
+
+            // 重置游戏
+            function resetGame() {
+                if (isRunning) {
+                    togglePlayPause();
+                }
+                
+                generation = 0;
+                initializeGrid();
+            }
+
+            // 加载预设模式
+            function loadPattern(patternName) {
+                if (isRunning) {
+                    togglePlayPause();
+                }
+                
+                // 清空网格
+                for (let y = 0; y < gridSize; y++) {
+                    for (let x = 0; x < gridSize; x++) {
+                        grid[y][x] = false;
+                    }
+                }
+                
+                // 计算中心坐标
+                const centerX = Math.floor(gridSize / 2);
+                const centerY = Math.floor(gridSize / 2);
+                
+                // 预设模式定义
+                const patterns = {
+                    glider: [
+                        [0, 1],
+                        [1, 2],
+                        [2, 0],
+                        [2, 1],
+                        [2, 2]
+                    ],
+                    blinker: [
+                        [0, 0],
+                        [0, 1],
+                        [0, 2]
+                    ],
+                    toad: [
+                        [1, 1],
+                        [1, 2],
+                        [1, 3],
+                        [0, 2],
+                        [0, 3],
+                        [0, 4]
+                    ],
+                    pulsar: [
+                        [2, 4], [2, 5], [2, 6], [2, 10], [2, 11], [2, 12],
+                        [7, 4], [7, 5], [7, 6], [7, 10], [7, 11], [7, 12],
+                        [9, 4], [9, 5], [9, 6], [9, 10], [9, 11], [9, 12],
+                        [14, 4], [14, 5], [14, 6], [14, 10], [14, 11], [14, 12],
+                        
+                        [4, 2], [5, 2], [6, 2], [10, 2], [11, 2], [12, 2],
+                        [4, 7], [5, 7], [6, 7], [10, 7], [11, 7], [12, 7],
+                        [4, 9], [5, 9], [6, 9], [10, 9], [11, 9], [12, 9],
+                        [4, 14], [5, 14], [6, 14], [10, 14], [11, 14], [12, 14]
+                    ],
+                    gliderGun: [
+                        [0, 24],
+                        [1, 22], [1, 24],
+                        [2, 12], [2, 13], [2, 20], [2, 21], [2, 34], [2, 35],
+                        [3, 11], [3, 15], [3, 20], [3, 21], [3, 34], [3, 35],
+                        [4, 0], [4, 1], [4, 10], [4, 16], [4, 20], [4, 21],
+                        [5, 0], [5, 1], [5, 10], [5, 14], [5, 16], [5, 17], [5, 22], [5, 24],
+                        [6, 10], [6, 16], [6, 24],
+                        [7, 11], [7, 15],
+                        [8, 12], [8, 13]
+                    ]
+                };
+                
+                if (patterns[patternName]) {
+                    const pattern = patterns[patternName];
+                    
+                    // 计算偏移量以居中显示模式
+                    let minX = Infinity, minY = Infinity;
+                    let maxX = -Infinity, maxY = -Infinity;
+                    
+                    pattern.forEach(([x, y]) => {
+                        minX = Math.min(minX, x);
+                        maxX = Math.max(maxX, x);
+                        minY = Math.min(minY, y);
+                        maxY = Math.max(maxY, y);
+                    });
+                    
+                    const patternWidth = maxX - minX + 1;
+                    const patternHeight = maxY - minY + 1;
+                    const offsetX = centerX - Math.floor(patternWidth / 2) - minX;
+                    const offsetY = centerY - Math.floor(patternHeight / 2) - minY;
+                    
+                    // 应用带偏移量的模式
+                    pattern.forEach(([x, y]) => {
+                        const gridX = x + offsetX;
+                        const gridY = y + offsetY;
+                        
+                        if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize) {
+                            grid[gridY][gridX] = true;
+                        }
+                    });
+                    
+                    generation = 0;
+                    renderGrid();
+                    updateStats();
+                }
+            }
+
+            // 事件监听器
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            resetBtn.addEventListener('click', resetGame);
+            
+            speedControl.addEventListener('input', (e) => {
+                simulationSpeed = parseInt(e.target.value);
+            });
+            
+            gridSizeControl.addEventListener('input', (e) => {
+                const newSize = parseInt(e.target.value);
+                if (newSize !== gridSize) {
+                    gridSize = newSize;
+                    resetGame();
+                }
+            });
+            
+            randomDensityControl.addEventListener('input', (e) => {
+                randomDensity = parseInt(e.target.value);
+            });
+            
+            patternBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const pattern = btn.dataset.pattern;
+                    loadPattern(pattern);
+                    
+                    // 移除所有按钮的active状态
+                    patternBtns.forEach(b => b.classList.remove('active'));
+                    // 添加当前按钮的active状态
+                    btn.classList.add('active');
+                });
+            });
+
+            // 初始化游戏
+            initializeGrid();
+        });
+    </script>
+</body>
+</html>
+    

@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>常用词搜索</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#F97316',
+                        neutral: '#64748B',
+                        light: '#F8FAFC',
+                        dark: '#1E293B'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .bubble-shadow {
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), inset 0 -5px 10px -3px rgba(0, 0, 0, 0.05);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+            .word-card-hover {
+                transition: all 0.2s ease;
+            }
+            .word-card-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-light to-blue-50 min-h-screen">
+    <header class="container mx-auto px-4 py-8 text-center">
+        <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-dark mb-4">
+            <span class="text-primary">常用词</span>搜索工具
+        </h1>
+        <p class="text-neutral text-lg max-w-3xl mx-auto">
+            点击词语类型探索细分分类，或使用搜索功能查找特定词语及例句
+        </p>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- 主分类区域 -->
+        <section id="main-categories" class="mb-16">
+            <h2 class="text-2xl font-semibold text-dark mb-8 text-center">词语分类</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                <!-- 主分类泡泡 -->
+                <div class="category-bubble cursor-pointer bg-primary/10 hover:bg-primary/20 text-primary rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="nature">
+                    <i class="fa fa-leaf text-3xl mb-2"></i>
+                    <p class="font-medium">自然</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-secondary/10 hover:bg-secondary/20 text-secondary rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="people">
+                    <i class="fa fa-users text-3xl mb-2"></i>
+                    <p class="font-medium">人物</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="emotion">
+                    <i class="fa fa-smile-o text-3xl mb-2"></i>
+                    <p class="font-medium">情感</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="action">
+                    <i class="fa fa-running text-3xl mb-2"></i>
+                    <p class="font-medium">动作</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="food">
+                    <i class="fa fa-cutlery text-3xl mb-2"></i>
+                    <p class="font-medium">食物</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="art">
+                    <i class="fa fa-paint-brush text-3xl mb-2"></i>
+                    <p class="font-medium">艺术</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="time">
+                    <i class="fa fa-clock-o text-3xl mb-2"></i>
+                    <p class="font-medium">时间</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="weather">
+                    <i class="fa fa-cloud text-3xl mb-2"></i>
+                    <p class="font-medium">天气</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-teal-500/10 hover:bg-teal-500/20 text-teal-500 rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="animal">
+                    <i class="fa fa-paw text-3xl mb-2"></i>
+                    <p class="font-medium">动物</p>
+                </div>
+                <div class="category-bubble cursor-pointer bg-gray-500/10 hover:bg-gray-500/20 text-gray-600 rounded-full p-6 text-center transition-all duration-300 transform hover:scale-105 bubble-shadow" data-category="object">
+                    <i class="fa fa-cube text-3xl mb-2"></i>
+                    <p class="font-medium">物品</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 细分分类区域 (默认隐藏) -->
+        <section id="sub-categories" class="mb-16 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <button id="back-to-main" class="text-primary hover:text-primary/80 transition-colors duration-200 flex items-center">
+                    <i class="fa fa-arrow-left mr-2"></i> 返回分类
+                </button>
+                <h2 id="current-category-title" class="text-2xl font-semibold text-dark"></h2>
+                <div class="w-10"></div> <!-- 占位元素，保持标题居中 -->
+            </div>
+            <div id="sub-category-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                <!-- 细分分类泡泡将通过JavaScript动态生成 -->
+            </div>
+        </section>
+
+        <!-- 词语列表展示区域 (默认隐藏) -->
+        <section id="word-display" class="mb-16 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <button id="back-to-sub" class="text-primary hover:text-primary/80 transition-colors duration-200 flex items-center">
+                    <i class="fa fa-arrow-left mr-2"></i> 返回分类
+                </button>
+                <h2 id="current-subcategory-title" class="text-2xl font-semibold text-dark"></h2>
+                <div class="w-10"></div> <!-- 占位元素，保持标题居中 -->
+            </div>
+            
+            <div class="grid grid-cols-1 gap-6">
+                <div id="word-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <!-- 词语列表将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 搜索功能 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-semibold text-dark mb-6 text-center">快速搜索</h2>
+            <div class="relative max-w-2xl mx-auto">
+                <input id="search-input" type="text" placeholder="输入词语或分类..." class="w-full py-3 px-5 pr-12 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300">
+                <button id="search-button" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-primary transition-colors duration-200">
+                    <i class="fa fa-search text-xl"></i>
+                </button>
+            </div>
+            <div id="search-results" class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+                <!-- 搜索结果将通过JavaScript动态生成 -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-dark text-white py-10">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">常用词搜索</h3>
+                    <p class="text-gray-400">
+                        一个简单易用的词语学习工具，帮助你探索丰富的词汇世界。
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">功能</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li>词语分类浏览</li>
+                        <li>详细例句搜索</li>
+                        <li>快速搜索功能</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">联系我们</h3>
+                    <p class="text-gray-400">
+                        如果你有任何建议或问题，请随时联系我们。
+                    </p>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500">
+                <p>&copy; 2025 常用词搜索工具 - 帮助你学习和掌握更多词汇</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 模拟数据
+        const wordData = {
+            nature: {
+                title: "自然",
+                subcategories: {
+                    weather: {
+                        title: "天气",
+                        words: [
+                            { word: "晴朗", sentence: "今天天气晴朗，阳光明媚，很适合出去散步。" },
+                            { word: "多云", sentence: "天空多云，太阳偶尔从云层中探出头来。" },
+                            { word: "下雨", sentence: "外面下雨了，出门记得带伞。" },
+                            { word: "下雪", sentence: "冬天到了，北方开始下雪，到处一片洁白。" },
+                            { word: "刮风", sentence: "刮风的时候要注意关好窗户，防止物品被吹走。" },
+                            { word: "雷暴", sentence: "雷暴天气尽量不要外出，避免发生危险。" },
+                            { word: "雾", sentence: "清晨的湖面笼罩着一层薄薄的雾，景色十分迷人。" },
+                            { word: "彩虹", sentence: "雨过天晴，天空中出现了一道美丽的彩虹。" }
+                        ]
+                    },
+                    plants: {
+                        title: "植物",
+                        words: [
+                            { word: "花朵", sentence: "公园里的花朵竞相开放，五颜六色，美丽极了。" },
+                            { word: "树木", sentence: "这片森林里有各种各样的树木，高大而茂密。" },
+                            { word: "草", sentence: "春天来了，草地上长出了嫩绿的新芽。" },
+                            { word: "树叶", sentence: "秋天到了，树叶纷纷飘落，像一只只蝴蝶在空中飞舞。" },
+                            { word: "种子", sentence: "农民伯伯把种子播撒在田地里，期待着丰收的季节。" },
+                            { word: "果实", sentence: "果树上结满了累累的果实，让人看了垂涎欲滴。" },
+                            { word: "竹子", sentence: "竹子是一种非常坚韧的植物，象征着顽强的生命力。" },
+                            { word: "蘑菇", sentence: "雨后的森林里，长出了许多五颜六色的蘑菇。" }
+                        ]
+                    },
+                    geography: {
+                        title: "地理",
+                        words: [
+                            { word: "山脉", sentence: "远处的山脉连绵起伏，气势雄伟。" },
+                            { word: "河流", sentence: "这条河流清澈见底，鱼儿在水中自由自在地游来游去。" },
+                            { word: "湖泊", sentence: "宁静的湖泊倒映着周围的山峦和树木，如同一幅美丽的画卷。" },
+                            { word: "海洋", sentence: "海洋是地球上最大的生态系统，蕴含着丰富的生物资源。" },
+                            { word: "沙漠", sentence: "沙漠地区气候干燥，很少有植物能够在那里生存。" },
+                            { word: "平原", sentence: "一望无际的平原上，牛羊在悠闲地吃草。" },
+                            { word: "岛屿", sentence: "这座岛屿风景优美，是旅游度假的好去处。" },
+                            { word: "火山", sentence: "火山喷发时会释放出大量的岩浆和火山灰，非常壮观。" }
+                        ]
+                    }
+                }
+            },
+            people: {
+                title: "人物",
+                subcategories: {
+                    family: {
+                        title: "家人",
+                        words: [
+                            { word: "父亲", sentence: "我的父亲是一个勤劳善良的人，他总是默默地为家庭付出。" },
+                            { word: "母亲", sentence: "母亲每天都早早起床为我们准备早餐，非常辛苦。" },
+                            { word: "儿子", sentence: "他是家里的独生子，深受父母的宠爱。" },
+                            { word: "女儿", sentence: "女儿长得像妈妈一样漂亮，而且非常聪明。" },
+                            { word: "兄弟", sentence: "他们兄弟俩感情很好，经常一起玩耍。" },
+                            { word: "姐妹", sentence: "姐妹俩穿着一模一样的衣服，看起来就像双胞胎。" },
+                            { word: "祖父", sentence: "祖父虽然年纪大了，但身体依然很硬朗。" },
+                            { word: "祖母", sentence: "祖母总是给我们讲过去的故事，让我们受益匪浅。" }
+                        ]
+                    },
+                    professions: {
+                        title: "职业",
+                        words: [
+                            { word: "医生", sentence: "医生的职责是救死扶伤，为病人解除痛苦。" },
+                            { word: "教师", sentence: "教师是人类灵魂的工程师，他们用知识浇灌着我们的心田。" },
+                            { word: "警察", sentence: "警察叔叔为了维护社会秩序，日夜坚守在岗位上。" },
+                            { word: "厨师", sentence: "这位厨师的厨艺非常精湛，做出来的菜色香味俱全。" },
+                            { word: "工程师", sentence: "工程师们设计和建造了许多现代化的建筑和设施。" },
+                            { word: "艺术家", sentence: "这位艺术家的作品风格独特，深受人们的喜爱。" },
+                            { word: "运动员", sentence: "运动员们经过刻苦训练，在赛场上取得了优异的成绩。" },
+                            { word: "科学家", sentence: "科学家们不断探索未知的领域，为人类做出了重要贡献。" }
+                        ]
+                    },
+                    personality: {
+                        title: "性格",
+                        words: [
+                            { word: "开朗", sentence: "她性格开朗，总是能给周围的人带来快乐。" },
+                            { word: "内向", sentence: "他性格内向，不太善于表达自己的情感。" },
+                            { word: "勇敢", sentence: "消防员叔叔非常勇敢，总是冲在救火的第一线。" },
+                            { word: "善良", sentence: "她是一个非常善良的人，经常帮助需要帮助的人。" },
+                            { word: "聪明", sentence: "这个孩子非常聪明，学习成绩一直名列前茅。" },
+                            { word: "勤劳", sentence: "我的妈妈非常勤劳，把家里收拾得井井有条。" },
+                            { word: "乐观", sentence: "无论遇到什么困难，他都保持乐观的心态。" },
+                            { word: "坚强", sentence: "她经历了许多挫折，但依然坚强地面对生活。" }
+                        ]
+                    }
+                }
+            },
+            emotion: {
+                title: "情感",
+                subcategories: {
+                    happiness: {
+                        title: "快乐",
+                        words: [
+                            { word: "高兴", sentence: "今天收到了礼物，我非常高兴。" },
+                            { word: "愉快", sentence: "我们度过了一个愉快的周末。" },
+                            { word: "幸福", sentence: "一家人在一起就是最大的幸福。" },
+                            { word: "兴奋", sentence: "明天要去旅游了，孩子们都很兴奋。" },
+                            { word: "满足", sentence: "经过努力，他终于实现了自己的目标，感到很满足。" },
+                            { word: "喜悦", sentence: "她脸上洋溢着喜悦的笑容。" },
+                            { word: "开心", sentence: "和朋友们一起玩耍真开心。" },
+                            { word: "欢乐", sentence: "节日里，到处充满了欢乐的气氛。" }
+                        ]
+                    },
+                    sadness: {
+                        title: "悲伤",
+                        words: [
+                            { word: "难过", sentence: "听说他生病了，我心里很难过。" },
+                            { word: "伤心", sentence: "她因为失去了心爱的宠物而伤心不已。" },
+                            { word: "悲痛", sentence: "听到这个不幸的消息，大家都很悲痛。" },
+                            { word: "沮丧", sentence: "这次考试没考好，他感到很沮丧。" },
+                            { word: "失望", sentence: "他的表现让大家很失望。" },
+                            { word: "孤独", sentence: "一个人在家，他感到很孤独。" },
+                            { word: "寂寞", sentence: "夜晚，她一个人坐在窗前，感到无比寂寞。" },
+                            { word: "哀愁", sentence: "他的眼神中充满了哀愁。" }
+                        ]
+                    },
+                    anger: {
+                        title: "愤怒",
+                        words: [
+                            { word: "生气", sentence: "他因为别人弄坏了他的玩具而生气。" },
+                            { word: "愤怒", sentence: "看到不公平的事情，他感到非常愤怒。" },
+                            { word: "发火", sentence: "爸爸因为我不听话而发火了。" },
+                            { word: "恼怒", sentence: "他的话让我很恼怒。" },
+                            { word: "暴躁", sentence: "他的脾气很暴躁，经常因为小事而生气。" },
+                            { word: "愤慨", sentence: "大家对这种不道德的行为感到愤慨。" },
+                            { word: "怒气", sentence: "他强压着心中的怒气，没有发作。" },
+                            { word: "火冒三丈", sentence: "听到这个消息，他火冒三丈。" }
+                        ]
+                    }
+                }
+            },
+            action: {
+                title: "动作",
+                subcategories: {
+                    movement: {
+                        title: "移动",
+                        words: [
+                            { word: "走", sentence: "我每天走路去上学。" },
+                            { word: "跑", sentence: "他跑得很快，像一阵风一样。" },
+                            { word: "跳", sentence: "孩子们在操场上快乐地跳着。" },
+                            { word: "飞", sentence: "鸟儿在天空中自由地飞着。" },
+                            { word: "爬", sentence: "小蜗牛慢慢地爬着。" },
+                            { word: "游泳", sentence: "夏天，我们喜欢去游泳池游泳。" },
+                            { word: "骑自行车", sentence: "他经常骑自行车去上班。" },
+                            { word: "开车", sentence: "爸爸会开车，他经常载我们去玩。" }
+                        ]
+                    },
+                    interaction: {
+                        title: "互动",
+                        words: [
+                            { word: "说", sentence: "他正在和朋友说话。" },
+                            { word: "听", sentence: "我们应该认真听老师讲课。" },
+                            { word: "看", sentence: "我喜欢看美丽的风景。" },
+                            { word: "读", sentence: "每天晚上我都会读书。" },
+                            { word: "写", sentence: "他正在写作业。" },
+                            { word: "吃", sentence: "妈妈做的饭很好吃。" },
+                            { word: "喝", sentence: "口渴了，我想喝水。" },
+                            { word: "玩", sentence: "周末，我和朋友们一起玩游戏。" }
+                        ]
+                    },
+                    creation: {
+                        title: "创造",
+                        words: [
+                            { word: "画", sentence: "她喜欢画画，画得非常漂亮。" },
+                            { word: "做", sentence: "我会做手工，比如折纸和剪纸。" },
+                            { word: "建造", sentence: "工人们正在建造高楼大厦。" },
+                            { word: "设计", sentence: "这位设计师设计的服装很时尚。" },
+                            { word: "发明", sentence: "爱迪生发明了电灯，为人类带来了光明。" },
+                            { word: "创作", sentence: "这位作家创作了许多优秀的作品。" },
+                            { word: "编织", sentence: "奶奶会编织毛衣，织得又快又好。" },
+                            { word: "烹饪", sentence: "爸爸正在厨房烹饪美味的菜肴。" }
+                        ]
+                    }
+                }
+            },
+            food: {
+                title: "食物",
+                subcategories: {
+                    fruits: {
+                        title: "水果",
+                        words: [
+                            { word: "苹果", sentence: "每天吃一个苹果，对身体有好处。" },
+                            { word: "香蕉", sentence: "香蕉富含钾元素，是一种很健康的水果。" },
+                            { word: "橙子", sentence: "橙子的维生素C含量很高。" },
+                            { word: "草莓", sentence: "春天，草莓园里的草莓红彤彤的，非常诱人。" },
+                            { word: "葡萄", sentence: "秋天是葡萄丰收的季节。" },
+                            { word: "西瓜", sentence: "夏天吃西瓜，又解渴又解暑。" },
+                            { word: "芒果", sentence: "芒果的味道香甜，很多人都喜欢吃。" },
+                            { word: "菠萝", sentence: "菠萝的味道酸甜可口，但吃之前需要用盐水泡一下。" }
+                        ]
+                    },
+                    vegetables: {
+                        title: "蔬菜",
+                        words: [
+                            { word: "胡萝卜", sentence: "胡萝卜富含维生素A，对眼睛有好处。" },
+                            { word: "西红柿", sentence: "西红柿既可以做菜，也可以当水果吃。" },
+                            { word: "土豆", sentence: "土豆是一种很常见的蔬菜，可以做出很多美味的菜肴。" },
+                            { word: "白菜", sentence: "冬天，家家户户都会储存一些白菜。" },
+                            { word: "茄子", sentence: "茄子的做法有很多种，比如红烧茄子、鱼香茄子等。" },
+                            { word: "黄瓜", sentence: "夏天，凉拌黄瓜是一道很受欢迎的菜。" },
+                            { word: "青椒", sentence: "青椒富含维生素C，颜色也很鲜艳。" },
+                            { word: "洋葱", sentence: "切洋葱的时候，很容易让人流眼泪。" }
+                        ]
+                    },
+                    meats: {
+                        title: "肉类",
+                        words: [
+                            { word: "牛肉", sentence: "牛肉富含蛋白质，是一种很有营养的肉类。" },
+                            { word: "猪肉", sentence: "猪肉是我们日常生活中最常见的肉类。" },
+                            { word: "鸡肉", sentence: "鸡肉比较清淡，适合老人和小孩吃。" },
+                            { word: "鱼肉", sentence: "鱼肉鲜美可口，而且容易消化。" },
+                            { word: "羊肉", sentence: "冬天吃羊肉可以暖身子。" },
+                            { word: "鸭肉", sentence: "北京烤鸭是中国著名的美食。" },
+                            { word: "火腿", sentence: "火腿可以用来做菜，也可以直接吃。" },
+                            { word: "香肠", sentence: "孩子们都喜欢吃香肠。" }
+                        ]
+                    }
+                }
+            },
+            art: {
+                title: "艺术",
+                subcategories: {
+                    music: {
+                        title: "音乐",
+                        words: [
+                            { word: "歌曲", sentence: "这首歌曲非常动听，我已经听了很多遍。" },
+                            { word: "钢琴", sentence: "她弹钢琴弹得非常好，经常在学校的文艺演出中表演。" },
+                            { word: "吉他", sentence: "他会弹吉他，经常在周末和朋友们一起演奏。" },
+                            { word: "小提琴", sentence: "小提琴的声音非常优美，让人陶醉。" },
+                            { word: "鼓手", sentence: "这位鼓手的节奏感很强，演奏非常有激情。" },
+                            { word: "歌手", sentence: "这位歌手的嗓音独特，深受歌迷的喜爱。" },
+                            { word: "乐队", sentence: "这个乐队的表演非常精彩，现场气氛热烈。" },
+                            { word: "舞蹈", sentence: "她的舞蹈跳得非常好，动作轻盈优美。" }
+                        ]
+                    },
+                    painting: {
+                        title: "绘画",
+                        words: [
+                            { word: "油画", sentence: "这幅油画的色彩非常丰富，表现力很强。" },
+                            { word: "水彩画", sentence: "水彩画的特点是色彩清新，给人一种柔和的感觉。" },
+                            { word: "素描", sentence: "他的素描功底非常扎实，人物肖像画得栩栩如生。" },
+                            { word: "漫画", sentence: "很多年轻人都喜欢看漫画，它充满了想象力。" },
+                            { word: "画家", sentence: "这位画家的作品风格独特，在艺术界享有很高的声誉。" },
+                            { word: "颜料", sentence: "绘画需要用到各种颜料，不同的颜料可以调出不同的颜色。" },
+                            { word: "画布", sentence: "油画通常是画在画布上的。" },
+                            { word: "画笔", sentence: "选择合适的画笔对于绘画来说非常重要。" }
+                        ]
+                    },
+                    literature: {
+                        title: "文学",
+                        words: [
+                            { word: "书籍", sentence: "书籍是人类进步的阶梯，我们应该多读书。" },
+                            { word: "小说", sentence: "这本小说的情节非常精彩，让人爱不释手。" },
+                            { word: "诗歌", sentence: "诗歌是一种很美的文学形式，能够表达深刻的情感。" },
+                            { word: "作家", sentence: "这位作家写了很多优秀的作品，深受读者的喜爱。" },
+                            { word: "故事", sentence: "妈妈每天晚上都会给我讲一个故事。" },
+                            { word: "散文", sentence: "这篇散文写得非常优美，读起来让人感到心旷神怡。" },
+                            { word: "读者", sentence: "作为读者，我们应该尊重作者的创作。" },
+                            { word: "图书馆", sentence: "图书馆里有各种各样的书籍，是学习的好地方。" }
+                        ]
+                    }
+                }
+            },
+            time: {
+                title: "时间",
+                subcategories: {
+                    days: {
+                        title: "日期",
+                        words: [
+                            { word: "今天", sentence: "今天是个好日子，适合出门游玩。" },
+                            { word: "明天", sentence: "明天我要去参加一个重要的会议。" },
+                            { word: "昨天", sentence: "昨天我去看了一场电影，非常精彩。" },
+                            { word: "星期一", sentence: "星期一是一周的开始，大家都很忙碌。" },
+                            { word: "星期二", sentence: "星期二下午我有一节英语课。" },
+                            { word: "星期三", sentence: "星期三我们学校有一场运动会。" },
+                            { word: "星期四", sentence: "星期四晚上我要和朋友一起吃饭。" },
+                            { word: "星期五", sentence: "星期五放学后，我喜欢和同学们一起打球。" }
+                        ]
+                    },
+                    seasons: {
+                        title: "季节",
+                        words: [
+                            { word: "春天", sentence: "春天是万物复苏的季节，到处充满了生机。" },
+                            { word: "夏天", sentence: "夏天天气炎热，我们经常去游泳。" },
+                            { word: "秋天", sentence: "秋天是丰收的季节，田野里一片金黄。" },
+                            { word: "冬天", sentence: "冬天非常寒冷，我们要穿暖和的衣服。" },
+                            { word: "一月", sentence: "一月是一年的第一个月，新年从这里开始。" },
+                            { word: "二月", sentence: "二月通常有28天，闰年有29天。" },
+                            { word: "三月", sentence: "三月是春天的开始，天气逐渐变暖。" },
+                            { word: "四月", sentence: "四月是春暖花开的季节，很多花儿都开了。" }
+                        ]
+                    },
+                    moments: {
+                        title: "时刻",
+                        words: [
+                            { word: "早上", sentence: "早上我通常六点半起床。" },
+                            { word: "中午", sentence: "中午我们在学校食堂吃饭。" },
+                            { word: "下午", sentence: "下午我要去图书馆借书。" },
+                            { word: "晚上", sentence: "晚上我喜欢看一会儿电视再睡觉。" },
+                            { word: "半夜", sentence: "半夜突然下起了大雨。" },
+                            { word: "黎明", sentence: "黎明时分，天空渐渐亮了起来。" },
+                            { word: "黄昏", sentence: "黄昏时的夕阳非常美丽。" },
+                            { word: "周末", sentence: "周末我喜欢和家人一起度过。" }
+                        ]
+                    }
+                }
+            },
+            weather: {
+                title: "天气",
+                subcategories: {
+                    general: {
+                        title: "天气状况",
+                        words: [
+                            { word: "晴天", sentence: "今天是晴天，阳光明媚。" },
+                            { word: "多云", sentence: "天空多云，可能会下雨。" },
+                            { word: "阴天", sentence: "阴天的天气让人感觉有些压抑。" },
+                            { word: "下雨", sentence: "外面下雨了，出门记得带伞。" },
+                            { word: "下雪", sentence: "冬天经常会下雪，大地一片洁白。" },
+                            { word: "刮风", sentence: "今天刮风很大，走路都有些困难。" },
+                            { word: "雾", sentence: "早上有雾，能见度很低。" },
+                            { word: "雷暴", sentence: "雷暴天气要注意安全，不要在树下避雨。" }
+                        ]
+                    },
+                    temperature: {
+                        title: "温度",
+                        words: [
+                            { word: "热", sentence: "夏天天气很热，人们都喜欢吃冰淇淋。" },
+                            { word: "冷", sentence: "冬天非常冷，要穿很多衣服。" },
+                            { word: "温暖", sentence: "春天的天气很温暖，适合出去散步。" },
+                            { word: "凉爽", sentence: "秋天的天气凉爽宜人。" },
+                            { word: "炎热", sentence: "夏天的中午非常炎热，最好不要出门。" },
+                            { word: "寒冷", sentence: "北方的冬天非常寒冷，气温常常低于零下。" },
+                            { word: "舒适", sentence: "今天的天气很舒适，不冷也不热。" },
+                            { word: "宜人", sentence: "春天的天气宜人，到处都是花香。" }
+                        ]
+                    },
+                    forecast: {
+                        title: "天气预报",
+                        words: [
+                            { word: "天气预报", sentence: "每天晚上七点，我都会看天气预报。" },
+                            { word: "温度", sentence: "今天的最高温度是30度。" },
+                            { word: "湿度", sentence: "今天的湿度比较高，感觉有些闷热。" },
+                            { word: "风力", sentence: "今天的风力不大，适合户外活动。" },
+                            { word: "降水概率", sentence: "明天的降水概率是50%，可能会下雨。" },
+                            { word: "晴天", sentence: "天气预报说未来三天都是晴天。" },
+                            { word: "多云转晴", sentence: "明天的天气是多云转晴。" },
+                            { word: "雷阵雨", sentence: "傍晚可能会有雷阵雨，要注意防范。" }
+                        ]
+                    }
+                }
+            },
+            animal: {
+                title: "动物",
+                subcategories: {
+                    pets: {
+                        title: "宠物",
+                        words: [
+                            { word: "狗", sentence: "狗是人类最忠实的朋友，很多家庭都养宠物狗。" },
+                            { word: "猫", sentence: "猫是一种很可爱的动物，喜欢独自玩耍。" },
+                            { word: "鸟", sentence: "鸟会飞，很多人喜欢养鸟听它们唱歌。" },
+                            { word: "鱼", sentence: "鱼生活在水里，鱼缸里养几条鱼可以增添生活情趣。" },
+                            { word: "兔子", sentence: "兔子的耳朵很长，尾巴很短，非常可爱。" },
+                            { word: "仓鼠", sentence: "仓鼠是一种小型宠物，很适合在家里饲养。" },
+                            { word: "乌龟", sentence: "乌龟的寿命很长，可以陪伴我们很多年。" },
+                            { word: "鹦鹉", sentence: "鹦鹉很聪明，可以学会说一些简单的话。" }
+                        ]
+                    },
+                    wild: {
+                        title: "野生动物",
+                        words: [
+                            { word: "老虎", sentence: "老虎是一种非常凶猛的野生动物，被称为森林之王。" },
+                            { word: "狮子", sentence: "狮子生活在草原上，是一种很强大的动物。" },
+                            { word: "大象", sentence: "大象是陆地上最大的动物，非常聪明。" },
+                            { word: "猴子", sentence: "猴子很活泼好动，喜欢在树上跳来跳去。" },
+                            { word: "熊猫", sentence: "熊猫是中国的国宝，非常可爱。" },
+                            { word: "长颈鹿", sentence: "长颈鹿的脖子很长，可以吃到树上的叶子。" },
+                            { word: "袋鼠", sentence: "袋鼠是澳大利亚特有的动物，它们用后腿跳跃。" },
+                            { word: "企鹅", sentence: "企鹅生活在南极，它们不怕寒冷。" }
+                        ]
+                    },
+                    insects: {
+                        title: "昆虫",
+                        words: [
+                            { word: "蝴蝶", sentence: "蝴蝶的翅膀很漂亮，它们在花丛中飞来飞去。" },
+                            { word: "蜜蜂", sentence: "蜜蜂会采蜜，它们为我们提供了美味的蜂蜜。" },
+                            { word: "蚂蚁", sentence: "蚂蚁很小，但它们非常勤劳，总是在忙碌地搬运食物。" },
+                            { word: "蜻蜓", sentence: "蜻蜓的眼睛很大，可以看到四面八方。" },
+                            { word: "蝉", sentence: "夏天，蝉在树上不停地叫着。" },
+                            { word: "蚊子", sentence: "蚊子会咬人，还会传播疾病。" },
+                            { word: "苍蝇", sentence: "苍蝇很脏，会传播细菌。" },
+                            { word: "蜘蛛", sentence: "蜘蛛会织网，用来捕捉昆虫。" }
+                        ]
+                    }
+                }
+            },
+            object: {
+                title: "物品",
+                subcategories: {
+                    household: {
+                        title: "家居用品",
+                        words: [
+                            { word: "桌子", sentence: "我们每天都在桌子上吃饭、学习。" },
+                            { word: "椅子", sentence: "这把椅子很舒服，我喜欢坐在上面看书。" },
+                            { word: "床", sentence: "床是我们睡觉的地方，每天都要好好休息。" },
+                            { word: "衣柜", sentence: "衣柜里放着我们的衣服。" },
+                            { word: "电视", sentence: "晚饭后，我们喜欢坐在沙发上看电视。" },
+                            { word: "冰箱", sentence: "冰箱里可以存放食物，保持它们的新鲜。" },
+                            { word: "洗衣机", sentence: "洗衣机可以帮我们洗衣服，节省很多时间。" },
+                            { word: "吸尘器", sentence: "用吸尘器可以快速清洁房间。" }
+                        ]
+                    },
+                    tools: {
+                        title: "工具",
+                        words: [
+                            { word: "锤子", sentence: "锤子可以用来钉钉子。" },
+                            { word: "螺丝刀", sentence: "螺丝刀可以用来拧螺丝。" },
+                            { word: "钳子", sentence: "钳子可以用来夹东西。" },
+                            { word: "扳手", sentence: "扳手可以用来拧紧或松开螺母。" },
+                            { word: "剪刀", sentence: "剪刀可以用来剪纸或裁剪布料。" },
+                            { word: "尺子", sentence: "尺子可以用来测量长度。" },
+                            { word: "锯子", sentence: "锯子可以用来锯木头。" },
+                            { word: "胶水", sentence: "胶水可以用来粘贴东西。" }
+                        ]
+                    },
+                    stationery: {
+                        title: "文具",
+                        words: [
+                            { word: "笔", sentence: "笔是我们学习和工作中常用的工具。" },
+                            { word: "纸", sentence: "纸上可以写字或画画。" },
+                            { word: "本子", sentence: "本子是用来记录笔记或写作业的。" },
+                            { word: "橡皮", sentence: "橡皮可以擦去铅笔写的字。" },
+                            { word: "尺子", sentence: "尺子可以用来画直线。" },
+                            { word: "书包", sentence: "书包是我们上学时用来装书和文具的。" },
+                            { word: "文具盒", sentence: "文具盒可以用来收纳各种文具。" },
+                            { word: "胶水", sentence: "胶水可以用来粘贴纸张。" }
+                        ]
+                    }
+                }
+            }
+        };
+
+        // 全局变量
+        let currentCategory = null;
+        let currentSubcategory = null;
+
+        // DOM元素
+        const mainCategoriesSection = document.getElementById('main-categories');
+        const subCategoriesSection = document.getElementById('sub-categories');
+        const wordDisplaySection = document.getElementById('word-display');
+        const searchResultsSection = document.getElementById('search-results');
+        const currentCategoryTitle = document.getElementById('current-category-title');
+        const currentSubcategoryTitle = document.getElementById('current-subcategory-title');
+        const subCategoryContainer = document.getElementById('sub-category-container');
+        const wordList = document.getElementById('word-list');
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const backToMainButton = document.getElementById('back-to-main');
+        const backToSubButton = document.getElementById('back-to-sub');
+
+        // 初始化主分类点击事件
+        document.querySelectorAll('.category-bubble').forEach(bubble => {
+            bubble.addEventListener('click', () => {
+                const categoryKey = bubble.getAttribute('data-category');
+                showSubcategories(categoryKey);
+            });
+        });
+
+        // 显示细分分类
+        function showSubcategories(categoryKey) {
+            currentCategory = categoryKey;
+            const category = wordData[categoryKey];
+            currentCategoryTitle.textContent = category.title;
+            subCategoryContainer.innerHTML = '';
+
+            // 创建细分分类泡泡
+            Object.keys(category.subcategories).forEach(subcategoryKey => {
+                const subcategory = category.subcategories[subcategoryKey];
+                const bubble = document.createElement('div');
+                bubble.className = 'subcategory-bubble cursor-pointer bg-white rounded-xl p-5 shadow-sm text-center transition-all duration-300 transform hover:scale-105 card-hover';
+                bubble.innerHTML = `
+                    <p class="font-medium text-lg">${subcategory.title}</p>
+                `;
+                bubble.addEventListener('click', () => {
+                    showWords(categoryKey, subcategoryKey);
+                });
+                subCategoryContainer.appendChild(bubble);
+            });
+
+            mainCategoriesSection.classList.add('hidden');
+            subCategoriesSection.classList.remove('hidden');
+            wordDisplaySection.classList.add('hidden');
+            searchResultsSection.classList.add('hidden');
+        }
+
+        // 显示词语列表
+        function showWords(categoryKey, subcategoryKey) {
+            currentCategory = categoryKey;
+            currentSubcategory = subcategoryKey;
+            
+            const category = wordData[categoryKey];
+            const subcategory = category.subcategories[subcategoryKey];
+            
+            currentSubcategoryTitle.textContent = subcategory.title;
+            wordList.innerHTML = '';
+            
+            // 创建词语卡片（显示词语和例句）
+            subcategory.words.forEach(word => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl p-5 shadow-sm word-card-hover';
+                card.innerHTML = `
+                    <div class="mb-3">
+                        <h4 class="font-medium text-xl">${word.word}</h4>
+                    </div>
+                    <p class="text-gray-700 text-sm leading-relaxed">
+                        ${word.sentence}
+                    </p>
+                `;
+                wordList.appendChild(card);
+            });
+            
+            wordDisplaySection.classList.remove('hidden');
+            subCategoriesSection.classList.add('hidden');
+        }
+
+        // 高亮搜索词
+        function highlightSearchTerm(text, term) {
+            if (!term) return text;
+            const regex = new RegExp(`(${term})`, 'gi');
+            return text.replace(regex, '<span class="bg-yellow-200 font-medium">$1</span>');
+        }
+
+        // 执行搜索
+        function performSearch() {
+            const searchTerm = searchInput.value.trim().toLowerCase();
+            if (!searchTerm) return;
+            
+            const results = {
+                category: [],
+                subcategory: [],
+                word: []
+            };
+            
+            // 搜索分类、子分类和词语
+            Object.keys(wordData).forEach(categoryKey => {
+                const category = wordData[categoryKey];
+                
+                // 检查分类名称
+                if (category.title.toLowerCase().includes(searchTerm)) {
+                    results.category.push({
+                        key: categoryKey,
+                        title: category.title,
+                        type: 'category'
+                    });
+                }
+                
+                // 检查子分类
+                Object.keys(category.subcategories).forEach(subcategoryKey => {
+                    const subcategory = category.subcategories[subcategoryKey];
+                    
+                    if (subcategory.title.toLowerCase().includes(searchTerm)) {
+                        results.subcategory.push({
+                            categoryKey,
+                            subcategoryKey,
+                            title: subcategory.title,
+                            categoryTitle: category.title,
+                            type: 'subcategory'
+                        });
+                    }
+                    
+                    // 检查词语
+                    subcategory.words.forEach(word => {
+                        if (word.word.toLowerCase().includes(searchTerm) || 
+                            word.sentence.toLowerCase().includes(searchTerm)) {
+                            results.word.push({
+                                ...word,
+                                category: category.title,
+                                subcategory: subcategory.title,
+                                categoryKey,
+                                subcategoryKey,
+                                type: 'word'
+                            });
+                        }
+                    });
+                });
+            });
+            
+            // 显示搜索结果
+            displaySearchResults(results);
+        }
+
+        // 显示搜索结果
+        function displaySearchResults(results) {
+            searchResultsSection.innerHTML = '';
+            searchResultsSection.classList.remove('hidden');
+            wordDisplaySection.classList.add('hidden');
+            subCategoriesSection.classList.add('hidden');
+            mainCategoriesSection.classList.add('hidden');
+            
+            // 显示分类结果
+            if (results.category.length > 0) {
+                const categoryHeader = document.createElement('div');
+                categoryHeader.className = 'col-span-full mt-6';
+                categoryHeader.innerHTML = `<h3 class="text-lg font-semibold mb-3 text-gray-700">分类</h3>`;
+                searchResultsSection.appendChild(categoryHeader);
+                
+                results.category.forEach(result => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-xl p-5 shadow-sm word-card-hover';
+                    card.innerHTML = `
+                        <h4 class="font-medium text-xl">${highlightSearchTerm(result.title, searchInput.value)}</h4>
+                        <p class="text-sm text-gray-500">点击查看此分类下的词语</p>
+                    `;
+                    card.addEventListener('click', () => {
+                        showSubcategories(result.key);
+                    });
+                    searchResultsSection.appendChild(card);
+                });
+            }
+            
+            // 显示子分类结果
+            if (results.subcategory.length > 0) {
+                const subcategoryHeader = document.createElement('div');
+                subcategoryHeader.className = 'col-span-full mt-6';
+                subcategoryHeader.innerHTML = `<h3 class="text-lg font-semibold mb-3 text-gray-700">子分类</h3>`;
+                searchResultsSection.appendChild(subcategoryHeader);
+                
+                results.subcategory.forEach(result => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-xl p-5 shadow-sm word-card-hover';
+                    card.innerHTML = `
+                        <div class="mb-2">
+                            <h4 class="font-medium text-xl">${highlightSearchTerm(result.title, searchInput.value)}</h4>
+                            <p class="text-sm text-gray-500">${result.categoryTitle}</p>
+                        </div>
+                        <p class="text-sm text-gray-500">点击查看此分类下的词语</p>
+                    `;
+                    card.addEventListener('click', () => {
+                        showWords(result.categoryKey, result.subcategoryKey);
+                    });
+                    searchResultsSection.appendChild(card);
+                });
+            }
+            
+            // 显示词语结果
+            if (results.word.length > 0) {
+                const wordHeader = document.createElement('div');
+                wordHeader.className = 'col-span-full mt-6';
+                wordHeader.innerHTML = `<h3 class="text-lg font-semibold mb-3 text-gray-700">词语</h3>`;
+                searchResultsSection.appendChild(wordHeader);
+                
+                results.word.forEach(result => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-xl p-5 shadow-sm word-card-hover';
+                    card.innerHTML = `
+                        <div class="mb-3">
+                            <h4 class="font-medium text-xl">${highlightSearchTerm(result.word, searchInput.value)}</h4>
+                            <p class="text-sm text-gray-500">${result.category} > ${result.subcategory}</p>
+                        </div>
+                        <p class="text-gray-700 text-sm leading-relaxed">
+                            ${highlightSearchTerm(result.sentence, searchInput.value)}
+                        </p>
+                    `;
+                    card.addEventListener('click', () => {
+                        searchInput.value = result.word;
+                        performSearch();
+                    });
+                    searchResultsSection.appendChild(card);
+                });
+            }
+            
+            // 如果没有结果
+            if (results.category.length === 0 && 
+                results.subcategory.length === 0 && 
+                results.word.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'col-span-full text-center py-10';
+                noResult.innerHTML = `
+                    <i class="fa fa-search text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">没有找到与 "${searchInput.value}" 相关的结果</p>
+                `;
+                searchResultsSection.appendChild(noResult);
+            }
+        }
+
+        // 搜索按钮点击事件
+        searchButton.addEventListener('click', performSearch);
+        
+        // 搜索输入框回车事件
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // 返回主分类按钮点击事件
+        backToMainButton.addEventListener('click', () => {
+            subCategoriesSection.classList.add('hidden');
+            mainCategoriesSection.classList.remove('hidden');
+            searchResultsSection.classList.add('hidden');
+            wordDisplaySection.classList.add('hidden');
+        });
+
+        // 返回子分类按钮点击事件
+        backToSubButton.addEventListener('click', () => {
+            wordDisplaySection.classList.add('hidden');
+            subCategoriesSection.classList.remove('hidden');
+            searchResultsSection.classList.add('hidden');
+        });
+
+        // 初始化页面
+        window.addEventListener('DOMContentLoaded', () => {
+            // 自动聚焦搜索框
+            searchInput.focus();
+        });
+    </script>
+</body>
+</html>

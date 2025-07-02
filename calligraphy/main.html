@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>毛笔字模拟程序</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#8B4513',
+                        secondary: '#D2B48C',
+                        ink: '#000000',
+                        paper: '#FFF8DC',
+                    },
+                    fontFamily: {
+                        calligraphy: ['"Ma Shan Zheng"', 'cursive', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .canvas-container {
+                @apply relative w-full h-[80vh] bg-paper shadow-lg rounded-lg overflow-hidden;
+            }
+            .control-panel {
+                @apply bg-secondary/80 backdrop-blur-sm p-4 rounded-lg shadow-md;
+            }
+            .btn {
+                @apply px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50;
+            }
+            .btn-primary {
+                @apply bg-primary text-white hover:bg-primary/90;
+            }
+            .btn-secondary {
+                @apply bg-white text-primary hover:bg-gray-100;
+            }
+            .brush-preview {
+                @apply w-10 h-10 rounded-full bg-ink flex items-center justify-center text-white;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans min-h-screen">
+    <div class="container mx-auto px-4 py-6">
+        <header class="text-center mb-6">
+            <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-primary font-calligraphy">毛笔字模拟程序</h1>
+            <p class="text-gray-600 mt-2">体验毛笔书写的魅力，可参考范字练习</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- 控制面板 -->
+            <div class="lg:w-1/5 order-2 lg:order-1">
+                <div class="control-panel">
+                    <h2 class="text-xl font-semibold text-primary mb-4 border-b border-primary/30 pb-2">书写控制</h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">笔锋大小</label>
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="brushSize" min="5" max="50" value="20" 
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                            <span id="brushSizeValue" class="brush-preview">20</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">分叉程度</label>
+                        <input type="range" id="splitLevel" min="0" max="10" value="3" 
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">墨汁浓度</label>
+                        <input type="range" id="inkDensity" min="0.1" max="1" step="0.1" value="0.8" 
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">提按效果</label>
+                        <input type="range" id="pressureEffect" min="0" max="10" value="7" 
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">笔锋锐度</label>
+                        <input type="range" id="brushSharpness" min="0" max="10" value="5" 
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">分叉角度</label>
+                        <input type="range" id="splitAngle" min="0" max="90" value="30" 
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <button id="clearCanvas" class="btn btn-secondary">
+                            <i class="fa fa-eraser mr-2"></i>清空画布
+                        </button>
+                        <button id="saveCanvas" class="btn btn-primary">
+                            <i class="fa fa-save mr-2"></i>保存作品
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-medium text-primary mb-2">范字设置</h3>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="showModel" class="mr-2 accent-primary">
+                                <label for="showModel">显示范字</label>
+                            </div>
+                            <div class="flex items-center">
+                                <label for="modelText" class="mr-2">范字内容:</label>
+                                <input type="text" id="modelText" value="永" maxlength="1" 
+                                    class="w-10 h-10 text-center text-2xl font-calligraphy border border-gray-300 rounded">
+                            </div>
+                            <div class="flex items-center">
+                                <label for="modelOpacity" class="mr-2">透明度:</label>
+                                <input type="range" id="modelOpacity" min="0.1" max="1" step="0.1" value="0.5" 
+                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-primary/10 p-3 rounded border border-primary/20">
+                        <h3 class="text-lg font-medium text-primary mb-2">快捷键</h3>
+                        <ul class="text-sm space-y-1">
+                            <li><i class="fa fa-keyboard-o mr-1"></i> <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">M</kbd>：显示/隐藏范字</li>
+                            <li><i class="fa fa-keyboard-o mr-1"></i> <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">C</kbd>：清空画布</li>
+                            <li><i class="fa fa-keyboard-o mr-1"></i> <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">S</kbd>：保存作品</li>
+                            <li><i class="fa fa-keyboard-o mr-1"></i> <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">B</kbd>：切换笔锋模式</li>
+                            <li><i class="fa fa-keyboard-o mr-1"></i> <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">A</kbd>：调整分叉角度</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 画布区域 -->
+            <div class="lg:w-4/5 order-1 lg:order-2">
+                <div class="canvas-container">
+                    <canvas id="calligraphyCanvas" class="w-full h-full"></canvas>
+                    <div id="modelCharacter" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-50 hidden">
+                        <span id="modelCharText" class="text-[clamp(10rem,30vw,20rem)] font-calligraphy text-gray-400">永</span>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-center text-sm text-gray-500">
+                    <p>提示：在画布上按住鼠标并移动进行书写，书写速度会影响笔触粗细</p>
+                    <p id="brushModeInfo" class="mt-1">笔锋模式：毛笔</p>
+                    <p id="splitAngleInfo" class="mt-1">分叉角度：30°</p>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="mt-8 text-center text-gray-500 text-sm">
+            <p>毛笔字模拟程序 &copy; 2025 | 使用HTML5 Canvas技术实现</p>
+        </footer>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const canvas = document.getElementById('calligraphyCanvas');
+        const ctx = canvas.getContext('2d');
+        const modelCharacter = document.getElementById('modelCharacter');
+        const modelCharText = document.getElementById('modelCharText');
+        const brushSize = document.getElementById('brushSize');
+        const brushSizeValue = document.getElementById('brushSizeValue');
+        const splitLevel = document.getElementById('splitLevel');
+        const inkDensity = document.getElementById('inkDensity');
+        const pressureEffect = document.getElementById('pressureEffect');
+        const brushSharpness = document.getElementById('brushSharpness');
+        const splitAngle = document.getElementById('splitAngle');
+        const clearCanvas = document.getElementById('clearCanvas');
+        const saveCanvas = document.getElementById('saveCanvas');
+        const showModel = document.getElementById('showModel');
+        const modelText = document.getElementById('modelText');
+        const modelOpacity = document.getElementById('modelOpacity');
+        const brushModeInfo = document.getElementById('brushModeInfo');
+        const splitAngleInfo = document.getElementById('splitAngleInfo');
+
+        // 笔锋模式：0-圆头，1-自然收笔
+        let brushMode = 1;
+
+        // 设置画布尺寸
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            redrawModelCharacter();
+        }
+        
+        // 初始化画布
+        function initCanvas() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 清空画布
+            clearCanvas.addEventListener('click', () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+            
+            // 保存画布
+            saveCanvas.addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = 'calligraphy.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+            
+            // 范字设置
+            showModel.addEventListener('change', () => {
+                modelCharacter.classList.toggle('hidden', !showModel.checked);
+            });
+            
+            modelText.addEventListener('input', () => {
+                if (modelText.value.length > 0) {
+                    modelCharText.textContent = modelText.value.charAt(0);
+                } else {
+                    modelCharText.textContent = '永';
+                }
+            });
+            
+            modelOpacity.addEventListener('input', () => {
+                modelCharacter.style.opacity = modelOpacity.value;
+            });
+            
+            // 笔刷设置
+            brushSize.addEventListener('input', () => {
+                brushSizeValue.textContent = brushSize.value;
+            });
+            
+            // 分叉角度设置
+            splitAngle.addEventListener('input', () => {
+                splitAngleInfo.textContent = `分叉角度：${splitAngle.value}°`;
+            });
+            
+            // 笔锋模式切换
+            document.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'b') {
+                    brushMode = 1 - brushMode;
+                    brushModeInfo.textContent = `笔锋模式：${brushMode ? '毛笔' : '圆头'}`;
+                } else if (e.key.toLowerCase() === 'm') {
+                    showModel.checked = !showModel.checked;
+                    modelCharacter.classList.toggle('hidden', !showModel.checked);
+                } else if (e.key.toLowerCase() === 'c') {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                } else if (e.key.toLowerCase() === 's') {
+                    const link = document.createElement('a');
+                    link.download = 'calligraphy.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                } else if (e.key.toLowerCase() === 'a') {
+                    // 循环切换预设角度
+                    const presetAngles = [15, 30, 45, 60, 75, 90];
+                    const currentIndex = presetAngles.indexOf(parseInt(splitAngle.value));
+                    const nextIndex = (currentIndex + 1) % presetAngles.length;
+                    splitAngle.value = presetAngles[nextIndex];
+                    splitAngleInfo.textContent = `分叉角度：${splitAngle.value}°`;
+                }
+            });
+        }
+        
+        // 重绘范字
+        function redrawModelCharacter() {
+            if (!showModel.checked) return;
+            
+            // 计算范字大小
+            const size = Math.min(canvas.width, canvas.height) * 0.8;
+            modelCharText.style.fontSize = `${size}px`;
+        }
+        
+        // 毛笔效果模拟
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let speed = 0;
+        let lastTime = 0;
+        let strokePoints = []; // 存储笔画上的点
+        
+        // 开始绘制
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            startDrawing({
+                clientX: touch.clientX - rect.left,
+                clientY: touch.clientY - rect.top
+            });
+        });
+        
+        // 结束绘制
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchcancel', stopDrawing);
+        
+        // 绘制过程
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            draw({
+                clientX: touch.clientX - rect.left,
+                clientY: touch.clientY - rect.top
+            });
+        });
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            // 计算相对于画布的坐标
+            const rect = canvas.getBoundingClientRect();
+            [lastX, lastY] = [e.clientX - rect.left, e.clientY - rect.top];
+            lastTime = Date.now();
+            strokePoints = [{x: lastX, y: lastY, size: parseInt(brushSize.value)}];
+            
+            // 绘制落笔点
+            const size = parseInt(brushSize.value);
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, size / 2, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(0, 0, 0, ${parseFloat(inkDensity.value)})`;
+            ctx.fill();
+        }
+        
+        function stopDrawing() {
+            if (isDrawing && strokePoints.length > 1) {
+                // 处理笔画结尾效果
+                drawStrokeEnd();
+            }
+            isDrawing = false;
+            strokePoints = [];
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            // 计算相对于画布的坐标
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+            
+            // 计算移动速度
+            const currentTime = Date.now();
+            const timeDiff = currentTime - lastTime || 1; // 防止除零错误
+            const dx = currentX - lastX;
+            const dy = currentY - lastY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            speed = distance / timeDiff;
+            lastTime = currentTime;
+            
+            // 速度和压力影响笔触大小
+            const baseSize = parseInt(brushSize.value);
+            const pressure = parseInt(pressureEffect.value) / 10;
+            const variableSize = baseSize * (1 - Math.min(speed / 5, 0.5)) * (0.5 + pressure);
+            
+            // 存储当前点
+            strokePoints.push({x: currentX, y: currentY, size: variableSize});
+            
+            // 绘制毛笔效果
+            drawBrushStroke(lastX, lastY, currentX, currentY, variableSize);
+            
+            // 更新最后位置
+            [lastX, lastY] = [currentX, currentY];
+        }
+        
+        // 绘制毛笔笔触（带分叉效果）
+        function drawBrushStroke(x1, y1, x2, y2, size) {
+            const split = parseInt(splitLevel.value);
+            const density = parseFloat(inkDensity.value);
+            const sharpness = parseInt(brushSharpness.value) / 10;
+            
+            if (brushMode) {
+                // 毛笔模式 - 使用贝塞尔曲线模拟毛笔效果
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                
+                // 计算控制点
+                const cpX = (x1 + x2) / 2;
+                const cpY = (y1 + y2) / 2;
+                
+                ctx.quadraticCurveTo(cpX, cpY, x2, y2);
+                ctx.lineWidth = size;
+                
+                // 根据锐度调整笔锋
+                if (sharpness > 0.5) {
+                    ctx.lineCap = 'round';
+                } else {
+                    ctx.lineCap = 'butt';
+                }
+                
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = `rgba(0, 0, 0, ${density})`;
+                ctx.stroke();
+            } else {
+                // 圆头模式
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.lineWidth = size;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = `rgba(0, 0, 0, ${density})`;
+                ctx.stroke();
+            }
+            
+            // 添加分叉效果
+            if (split > 0 && size > 3) {
+                // 计算笔画方向
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                
+                // 沿路径均匀分布点
+                const segments = Math.floor(size / 5);
+                for (let i = 0; i < segments; i++) {
+                    const t = i / segments;
+                    const px = x1 + t * (x2 - x1);
+                    const py = y1 + t * (y2 - y1);
+                    
+                    // 确定分叉角度范围
+                    const maxSplitAngle = (parseInt(splitAngle.value) * Math.PI / 180) * (1 - t * 0.5);
+                    
+                    // 为每个点添加随机分叉
+                    const branches = Math.min(3, Math.ceil(split / 3));
+                    for (let j = 0; j < branches; j++) {
+                        // 生成更偏向垂直于笔画方向的分叉
+                        const splitAngleOffset = (Math.random() - 0.5) * maxSplitAngle;
+                        const splitAngle = angle + Math.PI/2 + splitAngleOffset; // 垂直方向+随机偏移
+                        
+                        // 分叉长度
+                        const length = size * 0.1 * (0.5 + Math.random() * split * 0.1);
+                        
+                        // 计算分叉终点
+                        const bx = px + Math.cos(splitAngle) * length;
+                        const by = py + Math.sin(splitAngle) * length;
+                        
+                        // 绘制分叉
+                        ctx.beginPath();
+                        ctx.moveTo(px, py);
+                        ctx.lineTo(bx, by);
+                        ctx.lineWidth = size * 0.3 * (0.5 + Math.random() * 0.5);
+                        ctx.strokeStyle = `rgba(0, 0, 0, ${density * 0.7})`;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+        
+        // 处理笔画结尾效果
+        function drawStrokeEnd() {
+            if (strokePoints.length < 3 || !brushMode) return;
+            
+            const density = parseFloat(inkDensity.value);
+            const sharpness = parseInt(brushSharpness.value) / 10;
+            
+            // 获取最后几个点来确定笔画方向
+            const lastPoint = strokePoints[strokePoints.length - 1];
+            const prevPoint = strokePoints[strokePoints.length - 2];
+            
+            // 计算笔画方向
+            const dx = lastPoint.x - prevPoint.x;
+            const dy = lastPoint.y - prevPoint.y;
+            const dirLength = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dirLength < 0.1) return; // 避免方向过小
+            
+            // 归一化方向向量
+            const normX = dx / dirLength;
+            const normY = dy / dirLength;
+            
+            // 创建笔锋效果 - 逐渐变细
+            const endPoints = Math.max(5, Math.floor(lastPoint.size / 2)); // 结尾效果的点数
+            const baseSize = lastPoint.size;
+            
+            for (let i = 1; i <= endPoints; i++) {
+                const t = i / endPoints;
+                
+                // 调整衰减曲线，使结尾更自然
+                const decayFactor = sharpness > 0.5 ? 
+                    (1 - t) * (1 - t * sharpness) : // 锐度高时更快变细
+                    1 - t * t;                     // 锐度低时更平缓
+                
+                const size = baseSize * decayFactor;
+                const x = lastPoint.x + normX * i * 1.5;
+                const y = lastPoint.y + normY * i * 1.5;
+                
+                // 绘制逐渐变细的线条
+                ctx.beginPath();
+                ctx.moveTo(lastPoint.x, lastPoint.y);
+                ctx.lineTo(x, y);
+                ctx.lineWidth = size;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = `rgba(0, 0, 0, ${density * (1 - t * 0.5)})`;
+                ctx.stroke();
+                
+                // 添加微小的分叉
+                if (size > 1.5 && parseInt(splitLevel.value) > 0) {
+                    const splitCount = Math.min(2, Math.ceil(parseInt(splitLevel.value) / 5));
+                    const maxSplitAngle = (parseInt(splitAngle.value) * Math.PI / 180) * (1 - t);
+                    
+                    for (let j = 0; j < splitCount; j++) {
+                        // 生成更偏向垂直于笔画方向的分叉
+                        const splitAngleOffset = (Math.random() - 0.5) * maxSplitAngle;
+                        const splitAngle = Math.atan2(normY, normX) + Math.PI/2 + splitAngleOffset;
+                        
+                        const splitLength = size * (0.3 + Math.random() * 0.7);
+                        const splitX = x + Math.cos(splitAngle) * splitLength;
+                        const splitY = y + Math.sin(splitAngle) * splitLength;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(splitX, splitY);
+                        ctx.lineWidth = Math.max(0.5, size * 0.3);
+                        ctx.strokeStyle = `rgba(0, 0, 0, ${density * 0.5 * (1 - t * 0.5)})`;
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // 添加笔锋尖端
+            if (sharpness > 0.3) {
+                const tipLength = baseSize * 0.5 * sharpness;
+                const tipX = lastPoint.x + normX * (endPoints * 1.5 + tipLength);
+                const tipY = lastPoint.y + normY * (endPoints * 1.5 + tipLength);
+                
+                ctx.beginPath();
+                ctx.moveTo(lastPoint.x + normX * endPoints * 1.5, lastPoint.y + normY * endPoints * 1.5);
+                ctx.lineTo(tipX, tipY);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = `rgba(0, 0, 0, ${density * 0.7})`;
+                ctx.stroke();
+            }
+        }
+        
+        // 初始化应用
+        initCanvas();
+    </script>
+</body>
+</html>
+    
