@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>你画我猜 - 单机双人版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4F46E5',
+            secondary: '#EC4899',
+            neutral: '#6B7280',
+            player1: '#3B82F6',
+            player2: '#F97316',
+            canvas: '#F9FAFB'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'fade-in': 'fadeIn 0.5s ease-in-out',
+            'slide-up': 'slideUp 0.5s ease-out',
+            'bounce-light': 'bounceLight 1s infinite',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(20px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            bounceLight: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-5px)' },
+            }
+          }
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .drawing-canvas {
+        touch-action: none;
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .btn-hover {
+        @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+      }
+      .card-hover {
+        @apply transition-all duration-300 hover:shadow-xl;
+      }
+      .input-focus {
+        @apply focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary;
+      }
+      .canvas-container {
+        @apply relative rounded-xl overflow-hidden border border-gray-200 shadow-md;
+      }
+      .player-active {
+        @apply border-l-4 border-primary bg-primary/5;
+      }
+      .player-inactive {
+        @apply border-l-4 border-transparent bg-white;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen flex flex-col">
+  <!-- 导航栏 -->
+  <header class="bg-white shadow-md sticky top-0 z-40 transition-all duration-300">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <h1 class="text-2xl md:text-3xl font-bold text-primary flex items-center animate-fade-in">
+        <i class="fa fa-paint-brush mr-2 text-primary/80"></i>
+        <span class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">你画我猜</span> - 单机双人版
+      </h1>
+      <div class="flex items-center space-x-4">
+        <button id="reset-game" class="bg-neutral hover:bg-gray-600 text-white px-4 py-2 rounded-lg btn-hover flex items-center">
+          <i class="fa fa-refresh mr-1"></i> 重置游戏
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主游戏区域 -->
+  <main class="flex-grow container mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- 左侧玩家信息和计时器 -->
+      <div class="bg-white rounded-xl shadow-lg p-6 card-hover animate-slide-up" style="animation-delay: 0.1s">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fa fa-users mr-2 text-primary"></i> 玩家信息
+          </h2>
+          
+          <div class="space-y-4">
+            <div id="player1-info" class="player-info flex items-center justify-between p-4 rounded-lg border-l-4 border-player1 bg-blue-50 transition-all duration-300">
+              <div class="flex items-center">
+                <div class="w-12 h-12 rounded-full bg-player1 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                  1
+                </div>
+                <div class="ml-4">
+                  <div class="font-medium text-lg">玩家 1</div>
+                  <div class="text-sm text-gray-500">绘画次数: <span id="player1-draws">0</span></div>
+                </div>
+              </div>
+              <div class="text-3xl font-bold text-player1">
+                <span id="player1-score">0</span>
+              </div>
+            </div>
+            
+            <div id="player2-info" class="player-info flex items-center justify-between p-4 rounded-lg transition-all duration-300">
+              <div class="flex items-center">
+                <div class="w-12 h-12 rounded-full bg-player2 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                  2
+                </div>
+                <div class="ml-4">
+                  <div class="font-medium text-lg">玩家 2</div>
+                  <div class="text-sm text-gray-500">绘画次数: <span id="player2-draws">0</span></div>
+                </div>
+              </div>
+              <div class="text-3xl font-bold text-player2">
+                <span id="player2-score">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fa fa-info-circle mr-2 text-primary"></i> 当前状态
+          </h2>
+          
+          <div id="game-status" class="p-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg min-h-[120px] flex items-center justify-center text-lg font-medium transition-all duration-300">
+            <div class="text-center">
+              <div class="animate-pulse-slow text-gray-500 mb-2">
+                <i class="fa fa-hourglass-half"></i>
+              </div>
+              <p>等待游戏开始...</p>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fa fa-clock-o mr-2 text-primary"></i> 计时器
+          </h2>
+          
+          <div class="bg-gradient-to-br from-primary/10 to-primary/5 rounded-full h-20 flex items-center justify-center mb-5 relative overflow-hidden">
+            <div id="timer" class="text-5xl font-bold text-primary relative z-10 transition-all duration-500">60</div>
+            <div class="absolute bottom-0 left-0 w-full h-0 bg-primary/20 transition-all duration-1000"></div>
+          </div>
+          
+          <button id="start-timer" class="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white py-4 rounded-lg font-medium btn-hover text-lg flex items-center justify-center">
+            <i class="fa fa-play mr-2"></i> 开始游戏
+          </button>
+        </div>
+      </div>
+      
+      <!-- 中间画布区域 -->
+      <div class="bg-white rounded-xl shadow-lg p-6 card-hover animate-slide-up" style="animation-delay: 0.2s">
+        <div class="mb-5 flex justify-between items-center">
+          <h2 class="text-xl font-bold text-gray-800 flex items-center">
+            <i class="fa fa-paint-brush mr-2 text-primary"></i> 绘画区域
+          </h2>
+          
+          <div class="flex space-x-3">
+            <button id="clear-canvas" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg btn-hover transform transition-all duration-300 hover:scale-110" title="清空画布">
+              <i class="fa fa-trash-o text-gray-700"></i>
+            </button>
+            <div class="relative">
+              <button id="color-picker-btn" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg btn-hover transform transition-all duration-300 hover:scale-110" title="选择颜色">
+                <i class="fa fa-paint-brush text-gray-700"></i>
+              </button>
+              <div id="color-picker" class="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-lg p-3 hidden z-20 animate-fade-in">
+                <div class="grid grid-cols-4 gap-2">
+                  <div class="w-8 h-8 rounded-full bg-black cursor-pointer color-option border-2 border-transparent hover:border-gray-300 transition-all transform hover:scale-110" data-color="black"></div>
+                  <div class="w-8 h-8 rounded-full bg-red-500 cursor-pointer color-option border-2 border-transparent hover:border-gray-300 transition-all transform hover:scale-110" data-color="red"></div>
+                  <div class="w-8 h-8 rounded-full bg-blue-500 cursor-pointer color-option border-2 border-transparent hover:border-gray-300 transition-all transform hover:scale-110" data-color="blue"></div>
+                  <div class="w-8 h-8 rounded-full bg-green-500 cursor-pointer color-option border-2 border-transparent hover:border-gray-300 transition-all transform hover:scale-110" data-color="green"></div>
+                  <div class="w-8 h-8 rounded-full bg-yellow-500 cursor-pointer color-option border-2 border-transparent hover:border-gray-300 transition-all transform hover:scale-110" data-color="yellow"></div>
+                  <div class="w-8 h-8 rounded-full bg-purple-500 cursor-pointer color-option border-2 border-transparent hover:border-gray-300 transition-all transform hover:scale-110" data-color="purple"></div>
+                  <div class="w-8 h-8 rounded-full bg-pink-500 cursor-pointer color-option border-2 border-transparent hover:border-gray-300 transition-all transform hover:scale-110" data-color="pink"></div>
+                  <div class="w-8 h-8 rounded-full bg-orange-500 cursor-pointer color-option border-2 border-transparent hover:border-gray-300 transition-all transform hover:scale-110" data-color="orange"></div>
+                </div>
+              </div>
+            </div>
+            <div class="relative">
+              <button id="brush-size-btn" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg btn-hover transform transition-all duration-300 hover:scale-110" title="画笔大小">
+                <i class="fa fa-bold text-gray-700"></i>
+              </button>
+              <div id="brush-size-slider" class="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-lg p-4 hidden w-48 z-20 animate-fade-in">
+                <input type="range" id="brush-size" min="1" max="20" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                <div class="text-center text-sm mt-2">
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500">细</span>
+                    <span>大小: <span id="brush-size-value">5</span></span>
+                    <span class="text-xs text-gray-500">粗</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="canvas-container">
+          <canvas id="drawing-canvas" class="w-full h-[450px] bg-canvas"></canvas>
+          <div id="hint-text" class="absolute inset-0 flex items-center justify-center bg-white/80 rounded-lg transition-opacity duration-500">
+            <div class="text-center p-6 animate-fade-in">
+              <p class="text-2xl md:text-3xl font-bold text-primary mb-2">等待游戏开始...</p>
+              <p class="text-gray-600 mt-3">玩家轮流绘制单词，另一位猜测</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 右侧猜词区域 -->
+      <div class="bg-white rounded-xl shadow-lg p-6 card-hover animate-slide-up" style="animation-delay: 0.3s">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fa fa-lightbulb-o mr-2 text-primary"></i> 猜词区域
+          </h2>
+          
+          <div id="word-hint" class="p-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg min-h-[120px] flex items-center justify-center text-lg font-medium transition-all duration-300">
+            <div class="text-center">
+              <div class="animate-pulse-slow text-gray-500 mb-2">
+                <i class="fa fa-info-circle"></i>
+              </div>
+              <p>游戏开始后显示提示</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fa fa-pencil-square-o mr-2 text-primary"></i> 输入答案
+          </h2>
+          
+          <div class="flex">
+            <input type="text" id="guess-input" placeholder="输入猜测..." class="flex-grow px-5 py-4 rounded-l-lg border border-gray-300 input-focus disabled:bg-gray-50 transition-all duration-300" disabled>
+            <button id="submit-guess" class="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white px-6 py-4 rounded-r-lg font-medium btn-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300" disabled>
+              提交
+            </button>
+          </div>
+          
+          <div id="guess-result" class="mt-3 p-4 rounded-lg hidden transition-all duration-500 transform opacity-0"></div>
+        </div>
+        
+        <div>
+          <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fa fa-history mr-2 text-primary"></i> 历史记录
+          </h2>
+          
+          <div id="guess-history" class="space-y-3 max-h-[220px] overflow-y-auto p-2">
+            <!-- 历史记录将在这里动态添加 -->
+            <div class="text-center text-gray-500 italic py-6">
+              <i class="fa fa-clock-o mr-1"></i> 暂无记录
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6">
+          <button id="next-turn" class="w-full bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-white py-4 rounded-lg font-medium btn-hover opacity-50 cursor-not-allowed transition-all duration-300" disabled>
+            <i class="fa fa-forward mr-2"></i> 下一轮
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-white shadow-inner py-6 mt-8">
+    <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+      <p>© 2025 你画我猜 - 单机双人版 | 设计与开发</p>
+      <p class="mt-1 text-xs">适合朋友聚会、家庭游戏的趣味互动体验</p>
+    </div>
+  </footer>
+
+  <!-- 胜利模态框 -->
+  <div id="winner-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-500">
+    <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all duration-500 scale-95">
+      <div class="text-center">
+        <div class="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5 animate-pulse">
+          <i class="fa fa-trophy text-5xl text-yellow-500"></i>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-800 mb-3">游戏结束!</h2>
+        <p id="winner-text" class="text-2xl text-gray-600 mb-7">玩家 1 获胜!</p>
+        <div class="flex space-x-4 justify-center">
+          <button id="play-again" class="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white px-8 py-4 rounded-lg font-medium btn-hover text-lg transform transition-all duration-300 hover:scale-105">
+            再玩一次
+          </button>
+          <button id="close-modal" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-4 rounded-lg font-medium btn-hover text-lg transform transition-all duration-300 hover:scale-105">
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 游戏状态和配置
+    const gameState = {
+      currentPlayer: 1, // 1 或 2
+      isDrawing: false,
+      timer: 60,
+      timerInterval: null,
+      currentWord: '',
+      wordHints: [],
+      score: {
+        1: 0,
+        2: 0
+      },
+      draws: {
+        1: 0,
+        2: 0
+      },
+      gameOver: false,
+      totalRounds: 5,
+      currentRound: 1
+    };
+
+    // 词库
+    const wordList = [
+      { word: "苹果", hint: "一种水果，通常是红色或绿色的" },
+      { word: "汽车", hint: "一种交通工具，有四个轮子" },
+      { word: "电脑", hint: "可以用来工作和娱乐的电子设备" },
+      { word: "花朵", hint: "植物的繁殖器官，通常很漂亮" },
+      { word: "猫咪", hint: "一种宠物，喜欢睡觉和玩耍" },
+      { word: "太阳", hint: "太阳系的中心天体，给地球带来光和热" },
+      { word: "雨伞", hint: "下雨天用来遮雨的工具" },
+      { word: "书籍", hint: "由纸张装订而成，里面有很多知识" },
+      { word: "手机", hint: "可以打电话、上网的电子设备" },
+      { word: "飞机", hint: "一种交通工具，可以在天空飞行" },
+      { word: "大象", hint: "陆地上最大的哺乳动物，有长鼻子" },
+      { word: "足球", hint: "一种球类运动，用脚踢" },
+      { word: "蛋糕", hint: "通常在生日时吃的甜点" },
+      { word: "彩虹", hint: "雨后天空中出现的七彩圆弧" },
+      { word: "火车", hint: "一种交通工具，在铁轨上行驶" },
+      { word: "月亮", hint: "地球的天然卫星，晚上会发光" },
+      { word: "铅笔", hint: "用来写字的工具，需要削尖" },
+      { word: "香蕉", hint: "一种黄色的水果，形状弯曲" },
+      { word: "房子", hint: "人们居住的建筑物" },
+      { word: "星星", hint: "夜空中闪烁的天体" }
+    ];
+
+    // DOM 元素
+    const canvas = document.getElementById('drawing-canvas');
+    const ctx = canvas.getContext('2d');
+    const hintText = document.getElementById('hint-text');
+    const wordHint = document.getElementById('word-hint');
+    const guessInput = document.getElementById('guess-input');
+    const submitGuess = document.getElementById('submit-guess');
+    const guessResult = document.getElementById('guess-result');
+    const guessHistory = document.getElementById('guess-history');
+    const startTimer = document.getElementById('start-timer');
+    const timerDisplay = document.getElementById('timer');
+    const nextTurn = document.getElementById('next-turn');
+    const clearCanvasBtn = document.getElementById('clear-canvas');
+    const colorPickerBtn = document.getElementById('color-picker-btn');
+    const colorPicker = document.getElementById('color-picker');
+    const brushSizeBtn = document.getElementById('brush-size-btn');
+    const brushSizeSlider = document.getElementById('brush-size-slider');
+    const brushSize = document.getElementById('brush-size');
+    const brushSizeValue = document.getElementById('brush-size-value');
+    const resetGameBtn = document.getElementById('reset-game');
+    const player1Score = document.getElementById('player1-score');
+    const player2Score = document.getElementById('player2-score');
+    const player1Draws = document.getElementById('player1-draws');
+    const player2Draws = document.getElementById('player2-draws');
+    const gameStatus = document.getElementById('game-status');
+    const winnerModal = document.getElementById('winner-modal');
+    const winnerText = document.getElementById('winner-text');
+    const playAgain = document.getElementById('play-again');
+    const closeModal = document.getElementById('close-modal');
+    const player1Info = document.getElementById('player1-info');
+    const player2Info = document.getElementById('player2-info');
+    const timerProgress = timerDisplay.parentElement.querySelector('div.absolute');
+
+    // 画布设置
+    let drawing = false;
+    let brushColor = 'black';
+    let brushWidth = 5;
+    let lastX = 0;
+    let lastY = 0;
+
+    // 调整画布大小
+    function resizeCanvas() {
+      const container = canvas.parentElement;
+      canvas.width = container.clientWidth;
+      canvas.height = 450;
+    }
+
+    // 初始化画布
+    function initCanvas() {
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      
+      // 鼠标事件
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDrawing);
+      canvas.addEventListener('mouseout', stopDrawing);
+      
+      // 触摸事件
+      canvas.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        startDrawing({
+          clientX: touch.clientX - rect.left,
+          clientY: touch.clientY - rect.top
+        });
+        e.preventDefault();
+      });
+      
+      canvas.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        draw({
+          clientX: touch.clientX - rect.left,
+          clientY: touch.clientY - rect.top
+        });
+        e.preventDefault();
+      });
+      
+      canvas.addEventListener('touchend', stopDrawing);
+      canvas.addEventListener('touchcancel', stopDrawing);
+    }
+
+    // 开始绘画
+    function startDrawing(e) {
+      if (!gameState.isDrawing) return;
+      
+      drawing = true;
+      const rect = canvas.getBoundingClientRect();
+      lastX = e.clientX - rect.left;
+      lastY = e.clientY - rect.top;
+      
+      // 开始绘制时的动画效果
+      canvas.classList.add('animate-pulse');
+      setTimeout(() => {
+        canvas.classList.remove('animate-pulse');
+      }, 300);
+    }
+
+    // 绘画
+    function draw(e) {
+      if (!drawing || !gameState.isDrawing) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = brushColor;
+      ctx.lineWidth = brushWidth;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      
+      lastX = x;
+      lastY = y;
+    }
+
+    // 停止绘画
+    function stopDrawing() {
+      drawing = false;
+    }
+
+    // 清除画布
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 添加清除动画
+      canvas.classList.add('opacity-50');
+      setTimeout(() => {
+        canvas.classList.remove('opacity-50');
+      }, 300);
+    }
+
+    // 获取随机单词
+    function getRandomWord() {
+      const randomIndex = Math.floor(Math.random() * wordList.length);
+      return wordList[randomIndex];
+    }
+
+    // 更新游戏状态显示
+    function updateGameStatus() {
+      if (gameState.gameOver) {
+        gameStatus.innerHTML = `
+          <div class="text-center">
+            <div class="text-yellow-500 mb-2 animate-pulse-slow">
+              <i class="fa fa-trophy"></i>
+            </div>
+            <p>游戏结束!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      if (gameState.isDrawing) {
+        gameStatus.innerHTML = `
+          <div class="text-center">
+            <div class="text-green-500 mb-2 animate-pulse">
+              <i class="fa fa-play-circle"></i>
+            </div>
+            <p>玩家 ${gameState.currentPlayer} 正在绘画</p>
+            <p class="text-sm text-gray-500 mt-1">剩余时间: ${gameState.timer} 秒</p>
+          </div>
+        `;
+      } else {
+        if (gameState.currentRound > 1) {
+          gameStatus.innerHTML = `
+            <div class="text-center">
+              <div class="text-primary mb-2">
+                <i class="fa fa-pause-circle"></i>
+              </div>
+              <p>回合 ${gameState.currentRound}/${gameState.totalRounds}</p>
+              <p class="text-sm text-gray-500 mt-1">准备: 玩家 ${gameState.currentPlayer} 绘画</p>
+            </div>
+          `;
+        } else {
+          gameStatus.innerHTML = `
+            <div class="text-center">
+              <div class="text-primary mb-2 animate-pulse-slow">
+                <i class="fa fa-hourglass-half"></i>
+              </div>
+              <p>游戏准备中</p>
+              <p class="text-sm text-gray-500 mt-1">回合 ${gameState.currentRound}/${gameState.totalRounds}</p>
+            </div>
+          `;
+        }
+      }
+      
+      // 高亮当前玩家
+      if (gameState.isDrawing) {
+        if (gameState.currentPlayer === 1) {
+          player1Info.classList.add('player-active');
+          player1Info.classList.remove('player-inactive');
+          player2Info.classList.remove('player-active');
+          player2Info.classList.add('player-inactive');
+        } else {
+          player2Info.classList.add('player-active');
+          player2Info.classList.remove('player-inactive');
+          player1Info.classList.remove('player-active');
+          player1Info.classList.add('player-inactive');
+        }
+      } else {
+        player1Info.classList.remove('player-active');
+        player1Info.classList.add('player-inactive');
+        player2Info.classList.remove('player-active');
+        player2Info.classList.add('player-inactive');
+      }
+    }
+
+    // 开始新回合
+    function startNewRound() {
+      // 重置画布
+      clearCanvas();
+      
+      // 隐藏结果
+      guessResult.classList.add('hidden');
+      guessResult.classList.remove('bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
+      guessResult.style.opacity = '0';
+      
+      // 重置输入
+      guessInput.value = '';
+      guessInput.disabled = false;
+      submitGuess.disabled = false;
+      
+      // 获取随机单词
+      const wordObj = getRandomWord();
+      gameState.currentWord = wordObj.word;
+      gameState.wordHints = [wordObj.hint];
+      
+      // 更新UI
+      updateGameStatus();
+      
+      // 显示提示（对绘画者）
+      if (gameState.currentPlayer === 1) {
+        hintText.innerHTML = `
+          <div class="text-center p-6">
+            <p class="text-2xl md:text-3xl font-bold text-primary mb-3">你要画的是: <span class="text-secondary">${gameState.currentWord}</span></p>
+            <p class="mt-3 text-gray-600">点击开始游戏后，展示给玩家2</p>
+            <div class="mt-4 text-sm text-gray-500 animate-pulse">
+              <i class="fa fa-lightbulb-o mr-1"></i> 提示: 尽量简化细节，突出特征
+            </div>
+          </div>
+        `;
+      } else {
+        hintText.innerHTML = `
+          <div class="text-center p-6">
+            <p class="text-2xl md:text-3xl font-bold text-primary mb-3">你要画的是: <span class="text-secondary">${gameState.currentWord}</span></p>
+            <p class="mt-3 text-gray-600">点击开始游戏后，展示给玩家1</p>
+            <div class="mt-4 text-sm text-gray-500 animate-pulse">
+              <i class="fa fa-lightbulb-o mr-1"></i> 提示: 尽量简化细节，突出特征
+            </div>
+          </div>
+        `;
+      }
+      
+      hintText.style.display = 'flex';
+      
+      if (gameState.currentPlayer === 1) {
+        wordHint.innerHTML = `
+          <div class="text-center">
+            <div class="text-gray-500 mb-2">
+              <i class="fa fa-eye-slash"></i>
+            </div>
+            <p>等待玩家 1 开始绘画...</p>
+          </div>
+        `;
+      } else {
+        wordHint.innerHTML = `
+          <div class="text-center">
+            <div class="text-gray-500 mb-2">
+              <i class="fa fa-eye-slash"></i>
+            </div>
+            <p>等待玩家 2 开始绘画...</p>
+          </div>
+        `;
+      }
+      
+      // 启用开始按钮
+      startTimer.disabled = false;
+      startTimer.classList.remove('opacity-50', 'cursor-not-allowed');
+      
+      // 禁用下一轮按钮
+      nextTurn.disabled = true;
+      nextTurn.classList.add('opacity-50', 'cursor-not-allowed');
+      
+      // 更新绘画次数
+      player1Draws.textContent = gameState.draws[1];
+      player2Draws.textContent = gameState.draws[2];
+      
+      // 重置计时器显示
+      timerDisplay.textContent = gameState.timer;
+      timerDisplay.classList.remove('text-red-500');
+      timerProgress.style.height = '0%';
+    }
+
+    // 开始游戏（计时器）
+    function startGame() {
+      if (gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+      }
+      
+      // 更新状态
+      gameState.isDrawing = true;
+      gameState.timer = 60;
+      
+      // 更新UI
+      updateGameStatus();
+      timerDisplay.textContent = gameState.timer;
+      hintText.style.opacity = '0';
+      
+      setTimeout(() => {
+        hintText.style.display = 'none';
+      }, 500);
+      
+      // 显示提示给猜测者
+      if (gameState.currentPlayer === 1) {
+        wordHint.innerHTML = `
+          <div class="text-center">
+            <div class="text-gray-600 mb-2">
+              <i class="fa fa-info-circle"></i>
+            </div>
+            <p>${gameState.wordHints[0]}</p>
+          </div>
+        `;
+      } else {
+        wordHint.innerHTML = `
+          <div class="text-center">
+            <div class="text-gray-600 mb-2">
+              <i class="fa fa-info-circle"></i>
+            </div>
+            <p>${gameState.wordHints[0]}</p>
+          </div>
+        `;
+      }
+      
+      // 开始计时
+      gameState.timerInterval = setInterval(() => {
+        gameState.timer--;
+        timerDisplay.textContent = gameState.timer;
+        timerProgress.style.height = `${(60 - gameState.timer) * 100 / 60}%`;
+        
+        // 改变颜色提醒
+        if (gameState.timer <= 10) {
+          timerDisplay.classList.add('text-red-500');
+          timerDisplay.classList.add('animate-pulse');
+        } else {
+          timerDisplay.classList.remove('text-red-500');
+          timerDisplay.classList.remove('animate-pulse');
+        }
+        
+        // 时间到
+        if (gameState.timer <= 0) {
+          endRound(false);
+        }
+      }, 1000);
+      
+      // 禁用开始按钮
+      startTimer.disabled = true;
+      startTimer.classList.add('opacity-50', 'cursor-not-allowed');
+      
+      // 记录绘画次数
+      gameState.draws[gameState.currentPlayer]++;
+      
+      // 添加动画效果
+      canvas.classList.add('border-primary');
+      setTimeout(() => {
+        canvas.classList.remove('border-primary');
+      }, 1000);
+    }
+
+    // 结束回合
+    function endRound(isCorrect) {
+      // 停止计时器
+      clearInterval(gameState.timerInterval);
+      gameState.timerInterval = null;
+      
+      // 更新状态
+      gameState.isDrawing = false;
+      
+      // 显示答案
+      hintText.innerHTML = `
+        <div class="text-center p-6">
+          <p class="text-2xl md:text-3xl font-bold text-primary mb-2">答案是: <span class="text-secondary">${gameState.currentWord}</span></p>
+          ${isCorrect ? 
+            `<p class="mt-3 text-green-600">恭喜，猜对了!</p>` : 
+            `<p class="mt-3 text-red-600">很遗憾，时间到了!</p>`
+          }
+        </div>
+      `;
+      
+      hintText.style.display = 'flex';
+      hintText.style.opacity = '1';
+      
+      // 更新分数
+      if (isCorrect) {
+        const points = Math.max(1, Math.floor(gameState.timer / 10));
+        gameState.score[gameState.currentPlayer === 1 ? 2 : 1] += points;
+        
+        // 显示正确结果
+        guessResult.innerHTML = `
+          <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+              <i class="fa fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div>
+              <div class="font-medium">回答正确!</div>
+              <div class="text-sm">+${points} 分</div>
+            </div>
+          </div>
+        `;
+        guessResult.classList.add('bg-green-100', 'text-green-700');
+        
+        // 添加得分动画
+        const scoreElement = gameState.currentPlayer === 1 ? player2Score : player1Score;
+        scoreElement.classList.add('text-green-500', 'scale-110');
+        setTimeout(() => {
+          scoreElement.classList.remove('text-green-500', 'scale-110');
+        }, 1000);
+      } else {
+        // 显示错误结果
+        guessResult.innerHTML = `
+          <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+              <i class="fa fa-times-circle text-red-500 text-xl"></i>
+            </div>
+            <div>
+              <div class="font-medium">时间到!</div>
+              <div class="text-sm">正确答案是: ${gameState.currentWord}</div>
+            </div>
+          </div>
+        `;
+        guessResult.classList.add('bg-red-100', 'text-red-700');
+      }
+      
+      guessResult.classList.remove('hidden');
+      setTimeout(() => {
+        guessResult.style.opacity = '1';
+      }, 10);
+      
+      // 更新UI分数
+      player1Score.textContent = gameState.score[1];
+      player2Score.textContent = gameState.score[2];
+      
+      // 禁用输入
+      guessInput.disabled = true;
+      submitGuess.disabled = true;
+      
+      // 启用下一轮按钮
+      nextTurn.disabled = false;
+      nextTurn.classList.remove('opacity-50', 'cursor-not-allowed');
+      
+      // 添加到历史记录
+      const historyItem = document.createElement('div');
+      historyItem.className = `p-3 rounded-lg ${isCorrect ? 'bg-green-50 border-l-4 border-green-500' : 'bg-red-50 border-l-4 border-red-500'}`;
+      historyItem.innerHTML = `
+        <div class="flex justify-between items-center">
+          <div>
+            <div class="font-medium">回合 ${gameState.currentRound}</div>
+            <div class="text-sm text-gray-600">${gameState.currentWord}</div>
+          </div>
+          <div class="flex items-center">
+            <span class="mr-2">${isCorrect ? '+'.concat(Math.max(1, Math.floor(gameState.timer / 10))) : '0'}</span>
+            <i class="fa ${isCorrect ? 'fa-check text-green-500' : 'fa-times text-red-500'}"></i>
+          </div>
+        </div>
+      `;
+      
+      // 清空初始提示
+      if (guessHistory.querySelector('.text-center')) {
+        guessHistory.innerHTML = '';
+      }
+      
+      // 添加新记录
+      guessHistory.prepend(historyItem);
+      
+      // 检查游戏是否结束
+      if (gameState.currentRound >= gameState.totalRounds) {
+        gameState.gameOver = true;
+        
+        // 延迟显示胜利模态框
+        setTimeout(() => {
+          showWinnerModal();
+        }, 2000);
+      }
+      
+      // 更新状态
+      updateGameStatus();
+    }
+
+    // 显示胜利模态框
+    function showWinnerModal() {
+      // 确定胜者
+      let winnerTextContent = '';
+      if (gameState.score[1] > gameState.score[2]) {
+        winnerTextContent = '玩家 1 获胜!';
+      } else if (gameState.score[2] > gameState.score[1]) {
+        winnerTextContent = '玩家 2 获胜!';
+      } else {
+        winnerTextContent = '平局!';
+      }
+      
+      winnerText.textContent = winnerTextContent;
+      
+      // 显示模态框
+      winnerModal.classList.remove('hidden');
+      setTimeout(() => {
+        winnerModal.style.opacity = '1';
+        winnerModal.querySelector('div').style.transform = 'scale(1)';
+      }, 10);
+    }
+
+    // 切换到下一轮
+    function nextRound() {
+      // 检查游戏是否结束
+      if (gameState.gameOver) {
+        return;
+      }
+      
+      // 切换当前玩家
+      gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+      
+      // 增加回合数
+      gameState.currentRound++;
+      
+      // 开始新回合
+      startNewRound();
+    }
+
+    // 重置游戏
+    function resetGame() {
+      // 重置游戏状态
+      gameState.currentPlayer = 1;
+      gameState.isDrawing = false;
+      gameState.timer = 60;
+      if (gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+      }
+      gameState.currentWord = '';
+      gameState.wordHints = [];
+      gameState.score = {
+        1: 0,
+        2: 0
+      };
+      gameState.draws = {
+        1: 0,
+        2: 0
+      };
+      gameState.gameOver = false;
+      gameState.currentRound = 1;
+      
+      // 重置UI
+      player1Score.textContent = '0';
+      player2Score.textContent = '0';
+      player1Draws.textContent = '0';
+      player2Draws.textContent = '0';
+      timerDisplay.textContent = '60';
+      timerDisplay.classList.remove('text-red-500', 'animate-pulse');
+      timerProgress.style.height = '0%';
+      
+      // 隐藏模态框
+      winnerModal.style.opacity = '0';
+      winnerModal.querySelector('div').style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        winnerModal.classList.add('hidden');
+      }, 500);
+      
+      // 清空画布
+      clearCanvas();
+      
+      // 隐藏结果
+      guessResult.classList.add('hidden');
+      guessResult.classList.remove('bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
+      guessResult.style.opacity = '0';
+      
+      // 重置输入
+      guessInput.value = '';
+      guessInput.disabled = true;
+      submitGuess.disabled = true;
+      
+      // 重置历史记录
+      guessHistory.innerHTML = `
+        <div class="text-center text-gray-500 italic py-6">
+          <i class="fa fa-clock-o mr-1"></i> 暂无记录
+        </div>
+      `;
+      
+      // 更新状态
+      updateGameStatus();
+      
+      // 显示初始提示
+      hintText.innerHTML = `
+        <div class="text-center p-6 animate-fade-in">
+          <p class="text-2xl md:text-3xl font-bold text-primary mb-2">等待游戏开始...</p>
+          <p class="text-gray-600 mt-3">玩家轮流绘制单词，另一位猜测</p>
+        </div>
+      `;
+      
+      hintText.style.display = 'flex';
+      hintText.style.opacity = '1';
+      
+      // 显示初始提示
+      wordHint.innerHTML = `
+        <div class="text-center">
+          <div class="animate-pulse-slow text-gray-500 mb-2">
+            <i class="fa fa-info-circle"></i>
+          </div>
+          <p>游戏开始后显示提示</p>
+        </div>
+      `;
+      
+      // 禁用开始按钮
+      startTimer.disabled = false;
+      startTimer.classList.remove('opacity-50', 'cursor-not-allowed');
+      
+      // 禁用下一轮按钮
+      nextTurn.disabled = true;
+      nextTurn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    // 添加事件监听器
+    document.addEventListener('DOMContentLoaded', function() {
+      // 初始化画布
+      initCanvas();
+      
+      // 开始游戏
+      startTimer.addEventListener('click', startGame);
+      
+      // 提交猜测
+      submitGuess.addEventListener('click', function() {
+        const guess = guessInput.value.trim();
+        if (guess === gameState.currentWord) {
+          endRound(true);
+        } else {
+          // 显示错误
+          guessResult.innerHTML = `
+            <div class="flex items-center">
+              <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                <i class="fa fa-times-circle text-red-500 text-xl"></i>
+              </div>
+              <div>
+                <div class="font-medium">回答错误!</div>
+                <div class="text-sm">再试一次</div>
+              </div>
+            </div>
+          `;
+          guessResult.classList.add('bg-red-100', 'text-red-700');
+          guessResult.classList.remove('hidden');
+          setTimeout(() => {
+            guessResult.style.opacity = '1';
+          }, 10);
+          
+          // 错误抖动动画
+          guessInput.classList.add('animate-shake');
+          setTimeout(() => {
+            guessInput.classList.remove('animate-shake');
+          }, 500);
+        }
+      });
+      
+      // 下一轮
+      nextTurn.addEventListener('click', nextRound);
+      
+      // 清空画布
+      clearCanvasBtn.addEventListener('click', clearCanvas);
+      
+      // 颜色选择器
+      colorPickerBtn.addEventListener('click', function() {
+        colorPicker.classList.toggle('hidden');
+        brushSizeSlider.classList.add('hidden');
+      });
+      
+      // 选择颜色
+      document.querySelectorAll('.color-option').forEach(option => {
+        option.addEventListener('click', function() {
+          brushColor = this.getAttribute('data-color');
+          colorPicker.classList.add('hidden');
+          
+          // 高亮当前选择的颜色
+          document.querySelectorAll('.color-option').forEach(opt => {
+            opt.classList.remove('border-gray-500');
+            opt.classList.add('border-transparent');
+          });
+          this.classList.remove('border-transparent');
+          this.classList.add('border-gray-500');
+        });
+      });
+      
+      // 画笔大小选择器
+      brushSizeBtn.addEventListener('click', function() {
+        brushSizeSlider.classList.toggle('hidden');
+        colorPicker.classList.add('hidden');
+      });
+      
+      // 调整画笔大小
+      brushSize.addEventListener('input', function() {
+        brushWidth = this.value;
+        brushSizeValue.textContent = brushWidth;
+      });
+      
+      // 重置游戏
+      resetGameBtn.addEventListener('click', resetGame);
+      
+      // 再玩一次
+      playAgain.addEventListener('click', resetGame);
+      
+      // 关闭模态框
+      closeModal.addEventListener('click', function() {
+        winnerModal.style.opacity = '0';
+        winnerModal.querySelector('div').style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          winnerModal.classList.add('hidden');
+        }, 500);
+      });
+      
+      // 点击其他区域关闭下拉菜单
+      document.addEventListener('click', function(event) {
+        if (!colorPickerBtn.contains(event.target) && !colorPicker.contains(event.target)) {
+          colorPicker.classList.add('hidden');
+        }
+        
+        if (!brushSizeBtn.contains(event.target) && !brushSizeSlider.contains(event.target)) {
+          brushSizeSlider.classList.add('hidden');
+        }
+      });
+      
+      // 添加抖动动画
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+          20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // 初始化游戏
+      startNewRound();
+    });
+  </script>
+</body>
+</html>  
