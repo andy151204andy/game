@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>解压小游戏</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4F46E5',
+            secondary: '#EC4899',
+            accent: '#8B5CF6',
+            neutral: '#1F2937',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .bubble {
+        position: absolute;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        transition: all 0.3s ease-out;
+      }
+      .splat {
+        position: absolute;
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+      }
+      .btn-active {
+        @apply bg-primary text-white;
+      }
+      .btn-hover {
+        @apply hover:bg-primary/90 hover:text-white transition-all duration-300;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+  <div class="container mx-auto px-4 py-8 max-w-6xl">
+    <!-- 游戏标题 -->
+    <header class="text-center mb-8">
+      <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-neutral mb-2">解压小游戏</h1>
+      <p class="text-gray-600 text-lg">点击、拖拽或捏一捏，释放你的压力</p>
+    </header>
+
+    <!-- 游戏控制面板 -->
+    <div class="bg-white rounded-xl shadow-lg p-4 mb-6 flex flex-wrap justify-center gap-3">
+      <button id="bubbleBtn" class="btn-active px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center">
+        <i class="fa fa-circle-o mr-2"></i>气泡爆破
+      </button>
+      <button id="splatBtn" class="px-5 py-2 bg-gray-200 rounded-lg shadow transition-all duration-300 flex items-center">
+        <i class="fa fa-paint-brush mr-2"></i>随意涂鸦
+      </button>
+      <button id="slimeBtn" class="px-5 py-2 bg-gray-200 rounded-lg shadow transition-all duration-300 flex items-center">
+        <i class="fa fa-hand-pointer-o mr-2"></i>史莱姆捏捏乐
+      </button>
+      <button id="resetBtn" class="px-5 py-2 bg-red-500 text-white rounded-lg shadow transition-all duration-300 flex items-center">
+        <i class="fa fa-refresh mr-2"></i>重置游戏
+      </button>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div class="relative bg-white rounded-xl shadow-xl overflow-hidden h-[70vh]">
+      <canvas id="gameCanvas" class="w-full h-full cursor-pointer"></canvas>
+      
+      <!-- 气泡爆破模式说明 -->
+      <div id="bubbleInfo" class="absolute top-4 left-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-md text-sm">
+        <h3 class="font-semibold text-primary mb-1">气泡爆破</h3>
+        <p class="text-gray-600">点击生成气泡，再次点击爆破</p>
+      </div>
+      
+      <!-- 涂鸦模式说明 -->
+      <div id="splatInfo" class="absolute top-4 left-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-md text-sm hidden">
+        <h3 class="font-semibold text-secondary mb-1">随意涂鸦</h3>
+        <p class="text-gray-600">拖动鼠标或手指进行涂鸦</p>
+      </div>
+      
+      <!-- 史莱姆捏捏乐说明 -->
+      <div id="slimeInfo" class="absolute top-4 left-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-md text-sm hidden">
+        <h3 class="font-semibold text-accent mb-1">史莱姆捏捏乐</h3>
+        <p class="text-gray-600">点击并拖动改变形状</p>
+      </div>
+    </div>
+
+    <!-- 游戏统计 -->
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <h3 class="text-gray-500 text-sm">已爆破气泡</h3>
+        <p id="bubblesPopped" class="text-3xl font-bold text-primary">0</p>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <h3 class="text-gray-500 text-sm">涂鸦点数</h3>
+        <p id="splatsCount" class="text-3xl font-bold text-secondary">0</p>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 text-center">
+        <h3 class="text-gray-500 text-sm">史莱姆变形次数</h3>
+        <p id="slimeChanges" class="text-3xl font-bold text-accent">0</p>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="mt-12 text-center text-gray-500 text-sm">
+      <p>希望这个小游戏能帮助你缓解压力，放松心情</p>
+      <p class="mt-2">© 2025 解压游戏工作室</p>
+    </footer>
+  </div>
+
+  <script>
+    // 获取DOM元素
+    let canvas, ctx, bubbleBtn, splatBtn, slimeBtn, resetBtn;
+    let bubbleInfo, splatInfo, slimeInfo;
+    let bubblesPoppedEl, splatsCountEl, slimeChangesEl;
+
+    // 游戏状态
+    let gameState = 'bubble'; // bubble, splat, slime
+    let bubbles = [];
+    let splats = [];
+    let slime = null;
+    let isDrawing = false;
+    let bubblesPopped = 0;
+    let splatsCount = 0;
+    let slimeChanges = 0;
+    
+    // 设置画布尺寸
+    function resizeCanvas() {
+      if (!canvas) return;
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      redraw();
+    }
+    
+    // 初始化史莱姆
+    function initSlime() {
+      if (!canvas) return;
+      
+      slime = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        radius: 100,
+        points: [],
+        isDragging: false,
+        dragPointIndex: -1,
+        color: getRandomColor('accent')
+      };
+      
+      // 创建史莱姆边缘点
+      const pointCount = 30;
+      for (let i = 0; i < pointCount; i++) {
+        const angle = (i / pointCount) * Math.PI * 2;
+        const distance = slime.radius + (Math.random() * 20 - 10); // 随机偏移
+        
+        slime.points.push({
+          x: slime.x + Math.cos(angle) * distance,
+          y: slime.y + Math.sin(angle) * distance,
+          originalAngle: angle,
+          distance: distance
+        });
+      }
+    }
+    
+    // 获取随机颜色
+    function getRandomColor(type) {
+      const colors = {
+        primary: ['#4F46E5', '#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE'],
+        secondary: ['#EC4899', '#F472B6', '#F8B4D9', '#FBCFE8', '#FCE7F3'],
+        accent: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#E0E7FF', '#EEF2FF'],
+        random: ['#F97316', '#10B981', '#3B82F6', '#EC4899', '#8B5CF6']
+      };
+      
+      if (type === 'random') {
+        const randomCategory = colors.random[Math.floor(Math.random() * colors.random.length)];
+        const categoryName = Object.keys(colors).find(key => colors[key].includes(randomCategory));
+        return colors[categoryName][Math.floor(Math.random() * colors[categoryName].length)];
+      }
+      
+      return colors[type][Math.floor(Math.random() * colors[type].length)];
+    }
+    
+    // 绘制气泡
+    function drawBubble(bubble) {
+      if (!ctx) return;
+      
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+      ctx.fillStyle = bubble.color;
+      ctx.fill();
+      
+      // 气泡高光
+      ctx.beginPath();
+      ctx.arc(
+        bubble.x - bubble.radius * 0.3, 
+        bubble.y - bubble.radius * 0.3, 
+        bubble.radius * 0.15, 
+        0, Math.PI * 2
+      );
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fill();
+      
+      // 气泡边缘
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    
+    // 绘制涂鸦点
+    function drawSplat(splat) {
+      if (!ctx) return;
+      
+      ctx.beginPath();
+      ctx.arc(splat.x, splat.y, splat.radius, 0, Math.PI * 2);
+      ctx.fillStyle = splat.color;
+      ctx.fill();
+    }
+    
+    // 绘制史莱姆
+    function drawSlime() {
+      if (!ctx || !slime) return;
+      
+      ctx.beginPath();
+      
+      // 使用贝塞尔曲线连接所有点
+      const points = slime.points;
+      const len = points.length;
+      
+      ctx.moveTo(points[0].x, points[0].y);
+      
+      for (let i = 1; i < len - 1; i++) {
+        const cpx = (points[i].x + points[i + 1].x) / 2;
+        const cpy = (points[i].y + points[i + 1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, cpx, cpy);
+      }
+      
+      // 连接最后一点和第一点
+      ctx.quadraticCurveTo(
+        points[len - 1].x, 
+        points[len - 1].y, 
+        points[0].x, 
+        points[0].y
+      );
+      
+      ctx.closePath();
+      
+      // 填充史莱姆
+      ctx.fillStyle = slime.color;
+      ctx.fill();
+      
+      // 添加高光
+      ctx.beginPath();
+      ctx.ellipse(
+        slime.x - slime.radius * 0.3, 
+        slime.y - slime.radius * 0.3, 
+        slime.radius * 0.25, 
+        slime.radius * 0.15, 
+        0, 
+        0, 
+        Math.PI * 2
+      );
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fill();
+      
+      // 添加边缘
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      
+      for (let i = 1; i < len - 1; i++) {
+        const cpx = (points[i].x + points[i + 1].x) / 2;
+        const cpy = (points[i].y + points[i + 1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, cpx, cpy);
+      }
+      
+      ctx.quadraticCurveTo(
+        points[len - 1].x, 
+        points[len - 1].y, 
+        points[0].x, 
+        points[0].y
+      );
+      
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    
+    // 绘制所有元素
+    function redraw() {
+      if (!ctx) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 绘制背景
+      if (gameState === 'bubble') {
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, '#EEF2FF');
+        gradient.addColorStop(1, '#DBEAFE');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (gameState === 'splat') {
+        ctx.fillStyle = '#FFF1F2';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (gameState === 'slime') {
+        ctx.fillStyle = '#F5F3FF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      
+      // 绘制所有气泡
+      bubbles.forEach(bubble => drawBubble(bubble));
+      
+      // 绘制所有涂鸦点
+      splats.forEach(splat => drawSplat(splat));
+      
+      // 绘制史莱姆
+      drawSlime();
+    }
+    
+    // 切换游戏模式
+    function switchGameMode(mode) {
+      gameState = mode;
+      
+      // 更新按钮样式
+      if (bubbleBtn) {
+        bubbleBtn.className = mode === 'bubble' ? 'btn-active px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center' : 'px-5 py-2 bg-gray-200 rounded-lg shadow transition-all duration-300 flex items-center';
+      }
+      if (splatBtn) {
+        splatBtn.className = mode === 'splat' ? 'btn-active px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center' : 'px-5 py-2 bg-gray-200 rounded-lg shadow transition-all duration-300 flex items-center';
+      }
+      if (slimeBtn) {
+        slimeBtn.className = mode === 'slime' ? 'btn-active px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center' : 'px-5 py-2 bg-gray-200 rounded-lg shadow transition-all duration-300 flex items-center';
+      }
+      
+      // 更新说明显示
+      if (bubbleInfo) bubbleInfo.style.display = mode === 'bubble' ? 'block' : 'hidden';
+      if (splatInfo) splatInfo.style.display = mode === 'splat' ? 'block' : 'hidden';
+      if (slimeInfo) slimeInfo.style.display = mode === 'slime' ? 'block' : 'hidden';
+      
+      // 初始化史莱姆（如果需要）
+      if (mode === 'slime' && !slime) {
+        initSlime();
+      }
+      
+      redraw();
+    }
+    
+    // 处理画布点击事件
+    function handleCanvasClick(event) {
+      if (!canvas) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      
+      if (gameState === 'bubble') {
+        handleBubbleClick(x, y);
+      } else if (gameState === 'splat') {
+        createSplat(x, y);
+      } else if (gameState === 'slime') {
+        if (!slime) return;
+        
+        // 检查是否点击了史莱姆边缘
+        for (let i = 0; i < slime.points.length; i++) {
+          const point = slime.points[i];
+          const distance = Math.sqrt(
+            Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2)
+          );
+          
+          if (distance < 20) { // 点击范围
+            slime.isDragging = true;
+            slime.dragPointIndex = i;
+            break;
+          }
+        }
+      }
+    }
+    
+    // 处理气泡点击
+    function handleBubbleClick(x, y) {
+      let bubblePopped = false;
+      
+      // 检查是否点击了现有气泡
+      for (let i = bubbles.length - 1; i >= 0; i--) {
+        const bubble = bubbles[i];
+        const distance = Math.sqrt(
+          Math.pow(x - bubble.x, 2) + Math.pow(y - bubble.y, 2)
+        );
+        
+        if (distance < bubble.radius) {
+          // 气泡爆破动画
+          createPopEffect(bubble.x, bubble.y, bubble.radius, bubble.color);
+          bubbles.splice(i, 1);
+          bubblesPopped++;
+          if (bubblesPoppedEl) bubblesPoppedEl.textContent = bubblesPopped;
+          bubblePopped = true;
+          break;
+        }
+      }
+      
+      // 如果没有点击任何气泡，创建一个新气泡
+      if (!bubblePopped) {
+        createBubble(x, y);
+      }
+      
+      redraw();
+    }
+    
+    // 创建气泡
+    function createBubble(x, y) {
+      const bubble = {
+        x: x,
+        y: y,
+        radius: 10 + Math.random() * 40,
+        color: getRandomColor('primary'),
+        isPopped: false
+      };
+      
+      bubbles.push(bubble);
+      redraw();
+    }
+    
+    // 创建爆破效果
+    function createPopEffect(x, y, radius, color) {
+      const particleCount = 15;
+      
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (i / particleCount) * Math.PI * 2;
+        const speed = 1 + Math.random() * 3;
+        const particle = {
+          x: x,
+          y: y,
+          radius: 2 + Math.random() * 4,
+          color: color,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          alpha: 1,
+          age: 0,
+          maxAge: 30 + Math.random() * 20
+        };
+        
+        splats.push(particle);
+        splatsCount++;
+        if (splatsCountEl) splatsCountEl.textContent = splatsCount;
+      }
+      
+      animatePopEffects();
+    }
+    
+    // 动画爆破效果
+    function animatePopEffects() {
+      let hasParticles = false;
+      
+      splats.forEach(particle => {
+        if (particle.age < particle.maxAge) {
+          hasParticles = true;
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          particle.age++;
+          particle.alpha = 1 - (particle.age / particle.maxAge);
+        }
+      });
+      
+      // 移除过期粒子
+      splats = splats.filter(particle => particle.age < particle.maxAge);
+      
+      redraw();
+      
+      if (hasParticles) {
+        requestAnimationFrame(animatePopEffects);
+      }
+    }
+    
+    // 创建涂鸦点
+    function createSplat(x, y, radius = null) {
+      const splat = {
+        x: x,
+        y: y,
+        radius: radius || (3 + Math.random() * 10),
+        color: getRandomColor('secondary')
+      };
+      
+      splats.push(splat);
+      splatsCount++;
+      if (splatsCountEl) splatsCountEl.textContent = splatsCount;
+      redraw();
+    }
+    
+    // 处理鼠标移动
+    function handleMouseMove(event) {
+      if (!canvas) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      
+      if (gameState === 'splat' && isDrawing) {
+        createSplat(x, y, 2 + Math.random() * 6);
+      } else if (gameState === 'slime' && slime && slime.isDragging) {
+        // 更新史莱姆边缘点位置
+        const index = slime.dragPointIndex;
+        if (index >= 0 && index < slime.points.length) {
+          slime.points[index].x = x;
+          slime.points[index].y = y;
+          slimeChanges++;
+          if (slimeChangesEl) slimeChangesEl.textContent = slimeChanges;
+          redraw();
+        }
+      }
+    }
+    
+    // 处理鼠标抬起
+    function handleMouseUp() {
+      if (gameState === 'splat') {
+        isDrawing = false;
+      } else if (gameState === 'slime' && slime) {
+        slime.isDragging = false;
+        slime.dragPointIndex = -1;
+      }
+    }
+    
+    // 处理触摸开始
+    function handleTouchStart(event) {
+      if (!canvas) return;
+      
+      event.preventDefault();
+      const touch = event.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      if (gameState === 'splat') {
+        isDrawing = true;
+        createSplat(x, y);
+      } else {
+        // 模拟点击事件
+        const clickEvent = new MouseEvent('click', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        canvas.dispatchEvent(clickEvent);
+      }
+    }
+    
+    // 处理触摸移动
+    function handleTouchMove(event) {
+      if (!isDrawing || gameState !== 'splat' || !canvas) return;
+      
+      event.preventDefault();
+      const touch = event.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      createSplat(x, y, 2 + Math.random() * 6);
+    }
+    
+    // 处理触摸结束
+    function handleTouchEnd() {
+      isDrawing = false;
+    }
+    
+    // 重置游戏
+    function resetGame() {
+      bubbles = [];
+      splats = [];
+      slime = gameState === 'slime' ? initSlime() : null;
+      bubblesPopped = 0;
+      splatsCount = 0;
+      slimeChanges = 0;
+      
+      if (bubblesPoppedEl) bubblesPoppedEl.textContent = bubblesPopped;
+      if (splatsCountEl) splatsCountEl.textContent = splatsCount;
+      if (slimeChangesEl) slimeChangesEl.textContent = slimeChanges;
+      
+      redraw();
+    }
+    
+    // 初始化事件监听
+    function initEventListeners() {
+      // 获取DOM元素
+      canvas = document.getElementById('gameCanvas');
+      if (canvas) ctx = canvas.getContext('2d');
+      bubbleBtn = document.getElementById('bubbleBtn');
+      splatBtn = document.getElementById('splatBtn');
+      slimeBtn = document.getElementById('slimeBtn');
+      resetBtn = document.getElementById('resetBtn');
+      bubbleInfo = document.getElementById('bubbleInfo');
+      splatInfo = document.getElementById('splatInfo');
+      slimeInfo = document.getElementById('slimeInfo');
+      bubblesPoppedEl = document.getElementById('bubblesPopped');
+      splatsCountEl = document.getElementById('splatsCount');
+      slimeChangesEl = document.getElementById('slimeChanges');
+      
+      // 游戏模式切换
+      if (bubbleBtn) bubbleBtn.addEventListener('click', () => switchGameMode('bubble'));
+      if (splatBtn) splatBtn.addEventListener('click', () => switchGameMode('splat'));
+      if (slimeBtn) slimeBtn.addEventListener('click', () => switchGameMode('slime'));
+      if (resetBtn) resetBtn.addEventListener('click', resetGame);
+      
+      // 鼠标事件
+      if (canvas) {
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mousedown', () => {
+          if (gameState === 'splat') isDrawing = true;
+        });
+      }
+      
+      window.addEventListener('mouseup', handleMouseUp);
+      
+      // 触摸事件
+      if (canvas) {
+        canvas.addEventListener('touchstart', handleTouchStart);
+        canvas.addEventListener('touchmove', handleTouchMove);
+        canvas.addEventListener('touchend', handleTouchEnd);
+      }
+      
+      // 窗口大小变化事件
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+    }
+    
+    // 初始化游戏
+    function initGame() {
+      initEventListeners();
+      switchGameMode('bubble');
+    }
+    
+    // 确保DOM加载完成后再初始化游戏
+    document.addEventListener('DOMContentLoaded', initGame);
+  </script>
+</body>
+</html>    
